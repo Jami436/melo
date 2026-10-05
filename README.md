@@ -1,4 +1,4 @@
-# Melo 🎵
+# Melo 
 
 A self-built music streaming web app — a learning/portfolio project exploring the architecture behind services like Spotify (auth, audio streaming, playlists, search, and recommendations), built from scratch with my own stack, UI, and content.
 

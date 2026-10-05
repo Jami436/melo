@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Melo</title>
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/player.css" />
+</head>
+<body>
+
+  <div id="app">
+    <aside id="sidebar">
+      <h1 class="logo">Melo</h1>
+      <nav>
+        <a href="index.html" class="active">Home</a>
+        <a href="pages/search.html">Search</a>
+        <a href="pages/library.html">Your Library</a>
+      </nav>
+    </aside>
+
+    <main id="main-content">
+      <h2>Welcome to Melo</h2>
+      <p>Your tracks and playlists will show up here.</p>
+    </main>
+  </div>
+
+  <footer id="player-bar">
+    <div id="now-playing">No track playing</div>
+    <audio id="audio-player"></audio>
+    <div id="player-controls">
+      <button id="prev-btn">⏮</button>
+      <button id="play-pause-btn">▶</button>
+      <button id="next-btn">⏭</button>
+    </div>
+  </footer>
+
+  <script src="js/api.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
