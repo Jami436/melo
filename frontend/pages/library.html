@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Melo — Your Library</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎧</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Unbounded:wght@700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../css/base.css" />
   <link rel="stylesheet" href="../css/layout.css" />
   <link rel="stylesheet" href="../css/player.css" />
@@ -11,16 +15,32 @@
 <body>
   <div id="app">
     <aside id="sidebar">
-      <h1 class="logo">Melo</h1>
+      <h1 class="logo">melo</h1>
+      <span class="logo-tag">turn it up ⌁</span>
       <nav>
         <a href="../index.html">Home</a>
         <a href="search.html">Search</a>
         <a href="library.html" class="active">Your Library</a>
       </nav>
+      <div class="side-sticker">
+        <strong>fyi</strong>
+        your library, your rules. no judgement here. 🎧
+      </div>
     </aside>
+
     <main id="main-content">
-      <h2>Your Library</h2>
-      <p>Your playlists and liked tracks will appear here.</p>
+      <section class="hero">
+        <span class="badge">your collection</span>
+        <h2>the <span class="text-gradient">vault.</span></h2>
+        <p>playlists you made at 3am, tracks you played 200 times — it all lives here.</p>
+      </section>
+
+      <div id="library-content">
+        <div class="empty-state">
+          <strong>it's quiet in here…</strong>
+          your playlists and liked tracks will appear here once you start listening.
+        </div>
+      </div>
     </main>
   </div>
 

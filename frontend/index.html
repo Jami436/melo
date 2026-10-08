@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Melo</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎧</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Unbounded:wght@700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/base.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/player.css" />
@@ -12,17 +16,53 @@
 
   <div id="app">
     <aside id="sidebar">
-      <h1 class="logo">Melo</h1>
+      <h1 class="logo">melo</h1>
+      <span class="logo-tag">turn it up ⌁</span>
       <nav>
         <a href="index.html" class="active">Home</a>
         <a href="pages/search.html">Search</a>
         <a href="pages/library.html">Your Library</a>
       </nav>
+      <div class="side-sticker">
+        <strong>hot take</strong>
+        life's too short for mid playlists. 🎵
+      </div>
     </aside>
 
     <main id="main-content">
-      <h2>Welcome to Melo</h2>
-      <p>Your tracks and playlists will show up here.</p>
+      <section class="hero">
+        <span class="badge">now streaming · v0.1 beta</span>
+        <h2>your sound,<br /><span class="text-gradient">unfiltered.</span></h2>
+        <p>no ads. no skips you'll regret. just you and the tracks that actually hit different. this is melo — press play and feel it.</p>
+        <div class="hero-actions">
+          <a href="pages/search.html" class="btn btn-primary">▶ start listening</a>
+          <a href="pages/library.html" class="btn btn-ghost">check library</a>
+        </div>
+      </section>
+
+      <h3 class="section-title">made for you</h3>
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-art">01</div>
+          <h3>late night drive</h3>
+          <span>42 tracks · moody</span>
+        </div>
+        <div class="card">
+          <div class="card-art">02</div>
+          <h3>gym mode: on</h3>
+          <span>28 tracks · loud</span>
+        </div>
+        <div class="card">
+          <div class="card-art">03</div>
+          <h3>main character</h3>
+          <span>35 tracks · iconic</span>
+        </div>
+        <div class="card">
+          <div class="card-art">04</div>
+          <h3>soft launch</h3>
+          <span>19 tracks · chill</span>
+        </div>
+      </div>
     </main>
   </div>
 

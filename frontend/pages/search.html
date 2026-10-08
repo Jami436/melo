@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Melo — Search</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎧</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Unbounded:wght@700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../css/base.css" />
   <link rel="stylesheet" href="../css/layout.css" />
   <link rel="stylesheet" href="../css/player.css" />
@@ -11,17 +15,35 @@
 <body>
   <div id="app">
     <aside id="sidebar">
-      <h1 class="logo">Melo</h1>
+      <h1 class="logo">melo</h1>
+      <span class="logo-tag">turn it up ⌁</span>
       <nav>
         <a href="../index.html">Home</a>
         <a href="search.html" class="active">Search</a>
         <a href="library.html">Your Library</a>
       </nav>
+      <div class="side-sticker">
+        <strong>pro tip</strong>
+        search by vibe, not just artist name. try "rainy tuesday".
+      </div>
     </aside>
+
     <main id="main-content">
-      <h2>Search</h2>
-      <input type="text" id="search-input" placeholder="What do you want to listen to?" />
-      <div id="search-results"></div>
+      <section class="hero">
+        <span class="badge">find your next obsession</span>
+        <h2>what's the<br /><span class="text-gradient">move today?</span></h2>
+      </section>
+
+      <div class="search-wrap">
+        <input type="text" id="search-input" placeholder="What do you want to listen to?" />
+      </div>
+
+      <div id="search-results">
+        <div class="empty-state">
+          <strong>nothing here… yet</strong>
+          type something above and let the algorithm do its thing.
+        </div>
+      </div>
     </main>
   </div>
 

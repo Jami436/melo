@@ -1,9 +1,24 @@
+/* ============================================================
+   MELO — airforce blue × black · gen-z edition
+   ============================================================ */
+
 :root {
-  --bg: #000000;
-  --surface: #121212;
-  --text: #f5ede0;
-  --accent: #d2691e;
-  --muted: #8a8a8a;
+  --bg: #050608;
+  --bg-2: #0a0e13;
+  --surface: #0d1218;
+  --surface-2: #141c25;
+  --text: #eef4f9;
+  --muted: #7f93a6;
+  --accent: #5d8aa8;
+  --accent-bright: #7fc0e8;
+  --accent-deep: #2c4a63;
+  --glow: rgba(127, 192, 232, 0.45);
+  --border: rgba(93, 138, 168, 0.28);
+  --hard-shadow: #1f3a4f;
+  --radius: 18px;
+  --font-body: "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, sans-serif;
+  --font-display: "Unbounded", "Space Grotesk", sans-serif;
 }
 
 * {
@@ -12,10 +27,28 @@
   padding: 0;
 }
 
+::selection {
+  background: var(--accent);
+  color: #000;
+}
+
 body {
   background: var(--bg);
+  background-image: radial-gradient(
+      ellipse 80% 50% at 70% -10%,
+      rgba(93, 138, 168, 0.16),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 60% 40% at 10% 110%,
+      rgba(44, 74, 99, 0.25),
+      transparent 60%
+    );
+  background-attachment: fixed;
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-body);
+  letter-spacing: 0.01em;
+  min-height: 100vh;
 }
 
 a {
@@ -29,4 +62,97 @@ button {
   background: none;
   border: none;
   color: var(--text);
+}
+
+input {
+  font: inherit;
+}
+
+/* ---------- shared bits ---------- */
+
+.badge {
+  display: inline-block;
+  padding: 5px 14px;
+  border: 1.5px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent-bright);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  background: rgba(93, 138, 168, 0.08);
+}
+
+.btn {
+  display: inline-block;
+  padding: 14px 32px;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-primary {
+  background: var(--accent-bright);
+  color: #04121c;
+  box-shadow: 4px 4px 0 var(--hard-shadow);
+}
+
+.btn-primary:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0 var(--hard-shadow);
+}
+
+.btn-ghost {
+  border: 1.5px solid var(--border);
+  color: var(--text);
+  background: rgba(93, 138, 168, 0.06);
+}
+
+.btn-ghost:hover {
+  border-color: var(--accent-bright);
+  color: var(--accent-bright);
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 var(--hard-shadow);
+}
+
+.text-gradient {
+  background: linear-gradient(100deg, var(--text) 20%, var(--accent-bright) 60%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 18px var(--glow);
+  }
+  50% {
+    box-shadow: 0 0 34px var(--glow);
+  }
+}
+
+@keyframes eq-bounce {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
 }

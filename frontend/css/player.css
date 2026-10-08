@@ -1,28 +1,86 @@
+/* ============================================================
+   Player bar — floating, glowing
+   ============================================================ */
+
 #player-bar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   height: 90px;
-  background: var(--surface);
-  border-top: 1px solid #222;
+  background: rgba(13, 18, 24, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 1.5px solid var(--accent);
+  box-shadow: 0 -8px 32px rgba(93, 138, 168, 0.22);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 26px;
+  z-index: 50;
 }
 
 #now-playing {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   color: var(--muted);
   font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#now-playing::before {
+  content: "";
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent-bright);
+  animation: pulse-glow 2s ease-in-out infinite;
 }
 
 #player-controls {
   display: flex;
-  gap: 16px;
-  font-size: 1.2rem;
+  align-items: center;
+  gap: 12px;
+}
+
+#player-controls button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  font-size: 1.05rem;
+  border: 1.5px solid var(--border);
+  background: var(--surface-2);
+  transition: all 0.16s ease;
 }
 
 #player-controls button:hover {
-  color: var(--accent);
+  border-color: var(--accent-bright);
+  color: var(--accent-bright);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 18px rgba(127, 192, 232, 0.25);
+}
+
+#play-pause-btn {
+  width: 54px !important;
+  height: 54px !important;
+  background: var(--accent-bright) !important;
+  color: #04121c !important;
+  border-color: var(--accent-bright) !important;
+  font-size: 1.15rem !important;
+  box-shadow: 0 0 22px var(--glow);
+  animation: pulse-glow 2.6s ease-in-out infinite;
+}
+
+#play-pause-btn:hover {
+  transform: scale(1.08) translateY(0) !important;
 }
