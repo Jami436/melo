@@ -4,75 +4,110 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Melo</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎧</text></svg>" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='42' fill='%23F5EDE0'/></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Unbounded:wght@700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/base.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/player.css" />
 </head>
 <body>
 
+  <a class="skip-link" href="#main-content">Skip to content</a>
+
   <div id="app">
     <aside id="sidebar">
-      <h1 class="logo">melo</h1>
-      <span class="logo-tag">turn it up ⌁</span>
-      <nav>
-        <a href="index.html" class="active">Home</a>
-        <a href="pages/search.html">Search</a>
-        <a href="pages/library.html">Your Library</a>
+      <a class="logo" href="index.html" aria-label="Melo home">Melo</a>
+      <nav aria-label="Primary">
+        <a href="index.html" class="active" aria-current="page">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 10.6 12 3.6l8.5 7"/><path d="M5.6 9.6V19a1 1 0 0 0 1 1h3.2v-5.2h4.4V20h3.2a1 1 0 0 0 1-1V9.6"/></svg>
+          <span>Home</span>
+        </a>
+        <a href="pages/search.html">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+          <span>Search</span>
+        </a>
+        <a href="pages/library.html">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.6" y="4.5" width="2.8" height="15" rx="1.2"/><rect x="9" y="4.5" width="2.8" height="15" rx="1.2"/><path d="M14.6 5.8 19 18"/></svg>
+          <span>Your Library</span>
+        </a>
       </nav>
-      <div class="side-sticker">
-        <strong>hot take</strong>
-        life's too short for mid playlists. 🎵
-      </div>
     </aside>
 
     <main id="main-content">
-      <section class="hero">
-        <span class="badge">now streaming · v0.1 beta</span>
-        <h2>your sound,<br /><span class="text-gradient">unfiltered.</span></h2>
-        <p>no ads. no skips you'll regret. just you and the tracks that actually hit different. this is melo — press play and feel it.</p>
-        <div class="hero-actions">
-          <a href="pages/search.html" class="btn btn-primary">▶ start listening</a>
-          <a href="pages/library.html" class="btn btn-ghost">check library</a>
+      <header class="greeting">
+        <p class="eyebrow" id="today-label">Today</p>
+        <h1 id="greeting">Good evening</h1>
+        <p class="sub">Nothing urgent. Press play and let it breathe.</p>
+      </header>
+
+      <section class="section" aria-labelledby="recent-heading">
+        <div class="section-head">
+          <h2 class="section-title" id="recent-heading">Recently played</h2>
+          <a class="section-link" href="pages/library.html">See all</a>
         </div>
+        <div class="card-row" id="recent-row" aria-busy="true"></div>
       </section>
 
-      <h3 class="section-title">made for you</h3>
-      <div class="card-grid">
-        <div class="card">
-          <div class="card-art">01</div>
-          <h3>late night drive</h3>
-          <span>42 tracks · moody</span>
+      <section class="section" aria-labelledby="made-heading">
+        <div class="section-head">
+          <h2 class="section-title" id="made-heading">Made for you</h2>
         </div>
-        <div class="card">
-          <div class="card-art">02</div>
-          <h3>gym mode: on</h3>
-          <span>28 tracks · loud</span>
-        </div>
-        <div class="card">
-          <div class="card-art">03</div>
-          <h3>main character</h3>
-          <span>35 tracks · iconic</span>
-        </div>
-        <div class="card">
-          <div class="card-art">04</div>
-          <h3>soft launch</h3>
-          <span>19 tracks · chill</span>
-        </div>
-      </div>
+        <div class="card-grid" id="made-grid" aria-busy="true"></div>
+      </section>
     </main>
   </div>
 
-  <footer id="player-bar">
-    <div id="now-playing">No track playing</div>
-    <audio id="audio-player"></audio>
-    <div id="player-controls">
-      <button id="prev-btn">⏮</button>
-      <button id="play-pause-btn">▶</button>
-      <button id="next-btn">⏭</button>
+  <footer id="player-bar" aria-label="Player">
+    <audio id="audio-player" preload="metadata"></audio>
+
+    <div class="np" id="now-playing">
+      <div class="np-cover" id="np-cover" aria-hidden="true"></div>
+      <div class="np-meta" aria-live="polite">
+        <span class="np-title" id="np-title">No track playing</span>
+        <span class="np-artist" id="np-artist">Pick something you love</span>
+      </div>
+      <button type="button" class="icon-btn np-like" id="like-btn" data-like="" aria-label="Save to Liked Songs" aria-pressed="false">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21.2l7.8-7.8 1.1-1.1a5.5 5.5 0 0 0 0-7.7z"/></svg>
+      </button>
+    </div>
+
+    <div class="player-center">
+      <div class="controls">
+        <button type="button" class="icon-btn ctrl-extra" id="shuffle-btn" aria-label="Shuffle" aria-pressed="false">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="m4 4 5 5"/></svg>
+        </button>
+        <button type="button" class="icon-btn" id="prev-btn" aria-label="Previous track">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 5.8v12.4L7 12z"/><path d="M4.8 5.8v12.4"/></svg>
+        </button>
+        <button type="button" class="play-btn" id="play-pause-btn" aria-label="Play">
+          <svg class="icon i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 5.6v12.8L19 12z"/></svg>
+          <svg class="icon i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 5.5v13"/><path d="M14.5 5.5v13"/></svg>
+        </button>
+        <button type="button" class="icon-btn" id="next-btn" aria-label="Next track">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.8v12.4L17 12z"/><path d="M19.2 5.8v12.4"/></svg>
+        </button>
+        <button type="button" class="icon-btn ctrl-extra" id="repeat-btn" aria-label="Repeat" aria-pressed="false">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        </button>
+      </div>
+      <div class="progress-row">
+        <span class="time" id="current-time">0:00</span>
+        <div class="slider-wrap">
+          <div class="slider-track"><div class="slider-fill" id="progress-fill"></div></div>
+          <input type="range" class="slider" id="progress-bar" min="0" max="100" step="0.1" value="0" aria-label="Seek" />
+        </div>
+        <span class="time" id="duration">0:00</span>
+      </div>
+    </div>
+
+    <div class="player-right">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6.5 9H3v6h3.5L11 19z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+      <div class="slider-wrap">
+        <div class="slider-track"><div class="slider-fill" id="volume-fill"></div></div>
+        <input type="range" class="slider" id="volume-slider" min="0" max="1" step="0.01" value="0.8" aria-label="Volume" />
+      </div>
     </div>
   </footer>
 
