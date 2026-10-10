@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Melo — Log in</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='42' fill='%23F5EDE0'/></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/base.css" />
+  <link rel="stylesheet" href="../css/layout.css" />
+  <link rel="stylesheet" href="../css/player.css" />
+</head>
+<body>
+
+  <a class="skip-link" href="#main-content">Skip to content</a>
+
+  <div id="app">
+    <main id="main-content" class="auth-main">
+      <div class="auth-card">
+        <a class="auth-logo" href="../index.html" aria-label="Melo home">Melo</a>
+
+        <div class="tabs auth-tabs" role="tablist" aria-label="Authentication">
+          <button type="button" class="tab" id="tab-login" role="tab" data-panel="login"
+            aria-selected="true" aria-controls="panel-login">Log in</button>
+          <button type="button" class="tab" id="tab-signup" role="tab" data-panel="signup"
+            aria-selected="false" aria-controls="panel-signup" tabindex="-1">Sign up</button>
+        </div>
+
+        <div id="panel-login" role="tabpanel" aria-labelledby="tab-login">
+          <form id="login-form">
+            <label class="field">
+              <span class="field-label">Email</span>
+              <input type="email" name="email" autocomplete="email" placeholder="you@example.com" required />
+            </label>
+            <label class="field">
+              <span class="field-label">Password</span>
+              <input type="password" name="password" autocomplete="current-password" placeholder="Your password" minlength="8" required />
+            </label>
+            <button type="submit" class="btn-primary" id="login-submit">Log in</button>
+          </form>
+        </div>
+
+        <div id="panel-signup" role="tabpanel" aria-labelledby="tab-signup" hidden>
+          <form id="signup-form">
+            <label class="field">
+              <span class="field-label">Email</span>
+              <input type="email" name="email" autocomplete="email" placeholder="you@example.com" required />
+            </label>
+            <label class="field">
+              <span class="field-label">Username</span>
+              <input type="text" name="username" autocomplete="username" placeholder="yourhandle" minlength="3" maxlength="50" required />
+            </label>
+            <label class="field">
+              <span class="field-label">Password</span>
+              <input type="password" name="password" autocomplete="new-password" placeholder="At least 8 characters" minlength="8" required />
+            </label>
+            <button type="submit" class="btn-primary" id="signup-submit">Create account</button>
+          </form>
+        </div>
+
+        <p class="auth-message" id="auth-message" role="status" aria-live="polite"></p>
+      </div>
+    </main>
+  </div>
+
+  <script src="../js/api.js"></script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

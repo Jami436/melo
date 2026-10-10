@@ -402,6 +402,163 @@
   border-bottom-color: var(--cream);
 }
 
+/* ---------- account (sidebar) ---------- */
+
+.side-account {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.account-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 14px;
+}
+
+.account-avatar {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: var(--r-pill);
+  background: var(--cream);
+  color: var(--bg);
+  display: grid;
+  place-items: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.account-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.account-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--r-md);
+  color: var(--cream-55);
+  font-size: 0.925rem;
+  font-weight: 500;
+  transition: color var(--t), background-color var(--t);
+}
+
+.account-btn:hover {
+  color: var(--cream);
+  background: var(--cream-04);
+}
+
+/* ---------- auth page ---------- */
+
+#main-content.auth-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 34px 30px;
+}
+
+.auth-logo {
+  display: inline-block;
+  font-family: var(--font-mark);
+  font-weight: 600;
+  font-size: 1.7rem;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  color: var(--cream);
+  margin-bottom: 26px;
+}
+
+.auth-tabs {
+  margin-bottom: 26px;
+}
+
+.field {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.field-label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--cream-55);
+  margin-bottom: 6px;
+}
+
+.field input {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  color: var(--cream);
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color var(--t), box-shadow var(--t);
+}
+
+.field input::placeholder {
+  color: var(--cream-55);
+}
+
+.field input:focus {
+  border-color: var(--cream-16);
+  box-shadow: 0 0 0 4px var(--cream-10);
+}
+
+.btn-primary {
+  width: 100%;
+  margin-top: 6px;
+  padding: 12px 18px;
+  border-radius: var(--r-pill);
+  background: var(--cream);
+  color: var(--bg);
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: transform var(--t), opacity var(--t);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+}
+
+.btn-primary:disabled {
+  opacity: 0.55;
+  transform: none;
+  cursor: default;
+}
+
+.auth-message {
+  margin-top: 16px;
+  min-height: 1.25em;
+  font-size: 0.875rem;
+  text-align: center;
+  color: var(--cream-55);
+}
+
+.auth-message.is-error {
+  color: var(--cream);
+}
+
 /* ---------- responsive ---------- */
 
 @media (max-width: 860px) {
@@ -433,7 +590,7 @@
 
   #sidebar nav {
     flex-direction: row;
-    width: 100%;
+    flex: 1;
     gap: 4px;
   }
 
@@ -450,6 +607,30 @@
   }
 
   #sidebar nav a .icon {
+    width: 21px;
+    height: 21px;
+  }
+
+  .side-account {
+    margin-top: 0;
+    flex: none;
+  }
+
+  .account-user {
+    display: none;
+  }
+
+  .account-btn {
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    padding: 6px 12px;
+    font-size: 0.65rem;
+    text-align: center;
+    border-radius: var(--r-md);
+  }
+
+  .account-btn .icon {
     width: 21px;
     height: 21px;
   }

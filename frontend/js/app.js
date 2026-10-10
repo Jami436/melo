@@ -5,6 +5,10 @@ const ICONS = {
   play: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 5.6v12.8L19 12z"/></svg>',
   heart:
     '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21.2l7.8-7.8 1.1-1.1a5.5 5.5 0 0 0 0-7.7z"/></svg>',
+  user:
+    '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12.5a4.25 4.25 0 1 0 0-8.5 4.25 4.25 0 0 0 0 8.5zM4.5 20a7.5 7.5 0 0 1 15 0z"/></svg>',
+  logout:
+    '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h3.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H15M11 16l-4-4 4-4M7 12h9"/></svg>',
 };
 
 const likedIds = new Set(
@@ -367,10 +371,135 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
+/* ---------- account (sidebar) ---------- */
+
+async function initAccount() {
+  const slot = document.getElementById("account-slot");
+  if (!slot) return; // no sidebar on this page (e.g. the auth page)
+
+  const sidebar = document.getElementById("sidebar");
+  const authHref = (sidebar && sidebar.dataset.authHref) || "pages/auth.html";
+
+  if (!getToken()) {
+    slot.innerHTML = `<a class="account-btn" href="${authHref}">${ICONS.user}<span>Log in</span></a>`;
+    return;
+  }
+
+  try {
+    const user = await authApi.me();
+    renderAccountUser(slot, user, authHref);
+  } catch {
+    // Token missing/expired/invalid — drop it and show the signed-out state.
+    clearToken();
+    slot.innerHTML = `<a class="account-btn" href="${authHref}">${ICONS.user}<span>Log in</span></a>`;
+  }
+}
+
+function renderAccountUser(slot, user, authHref) {
+  const name = user.username || user.email || "You";
+  const initial = escapeHtml(name.trim().charAt(0).toUpperCase() || "?");
+  slot.innerHTML =
+    `<div class="account-user"><span class="account-avatar" aria-hidden="true">${initial}</span>` +
+      `<span class="account-name">${escapeHtml(name)}</span></div>` +
+    `<button type="button" class="account-btn" id="logout-btn">${ICONS.logout}<span>Log out</span></button>`;
+
+  const logout = document.getElementById("logout-btn");
+  if (logout) {
+    logout.addEventListener("click", () => {
+      authApi.logout();
+      window.location.href = authHref;
+    });
+  }
+}
+
+/* ---------- auth page ---------- */
+
+function initAuthPage() {
+  const loginForm = document.getElementById("login-form");
+  const signupForm = document.getElementById("signup-form");
+  if (!loginForm && !signupForm) return; // not on the auth page
+
+  const message = document.getElementById("auth-message");
+  const logo = document.querySelector(".auth-logo");
+  const homeHref = (logo && logo.getAttribute("href")) || "../index.html";
+
+  const tabs = Array.from(document.querySelectorAll(".auth-tabs [role='tab']"));
+  const panels = { login: document.getElementById("panel-login"), signup: document.getElementById("panel-signup") };
+
+  function showMessage(text, isError = false) {
+    if (!message) return;
+    message.textContent = text;
+    message.classList.toggle("is-error", isError);
+  }
+
+  function selectTab(tab) {
+    tabs.forEach((t) => {
+      const on = t === tab;
+      t.setAttribute("aria-selected", String(on));
+      t.tabIndex = on ? 0 : -1;
+    });
+    Object.entries(panels).forEach(([key, panel]) => {
+      if (panel) panel.hidden = key !== tab.dataset.panel;
+    });
+    showMessage("");
+  }
+
+  tabs.forEach((tab, i) => {
+    tab.addEventListener("click", () => selectTab(tab));
+    tab.addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      e.preventDefault();
+      const next = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+      next.focus();
+      selectTab(next);
+    });
+  });
+
+  async function withPending(form, pendingText, run) {
+    const submit = form.querySelector('button[type="submit"]');
+    if (submit) submit.disabled = true;
+    showMessage(pendingText);
+    try {
+      await run();
+    } catch (err) {
+      showMessage(err.message || "Something went wrong.", true);
+    } finally {
+      if (submit) submit.disabled = false;
+    }
+  }
+
+  if (loginForm) {
+    loginForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const data = new FormData(loginForm);
+      withPending(loginForm, "Logging in…", async () => {
+        await authApi.login(String(data.get("email") || "").trim(), String(data.get("password") || ""));
+        window.location.href = homeHref;
+      });
+    });
+  }
+
+  if (signupForm) {
+    signupForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const data = new FormData(signupForm);
+      const email = String(data.get("email") || "").trim();
+      const password = String(data.get("password") || "");
+      withPending(signupForm, "Creating your account…", async () => {
+        await authApi.signup({ email, username: String(data.get("username") || "").trim(), password });
+        await authApi.login(email, password); // log straight in after signup
+        window.location.href = homeHref;
+      });
+    });
+  }
+}
+
 /* ---------- boot ---------- */
 
 document.addEventListener("DOMContentLoaded", () => {
   initHome();
   initSearch();
   initLibrary();
+  initAccount();
+  initAuthPage();
 });

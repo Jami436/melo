@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.routers import auth
+
 app = FastAPI(title="Melo API", version="0.1.0")
 
 # Allow the static frontend (served separately) to call this API during dev
@@ -22,8 +24,10 @@ def health():
     return {"status": "healthy"}
 
 
-# Routers will be included here as they're built, e.g.:
-# from app.routers import auth, tracks, playlists
-# app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(auth.router, prefix="/auth", tags=["auth"])
+
+
+# More routers will be included here as they're built, e.g.:
+# from app.routers import tracks, playlists
 # app.include_router(tracks.router, prefix="/tracks", tags=["tracks"])
 # app.include_router(playlists.router, prefix="/playlists", tags=["playlists"])

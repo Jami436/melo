@@ -1,24 +1,97 @@
 // Central place for all calls to the Melo FastAPI backend.
-// Until the backend is connected, the functions below resolve with
-// placeholder data so the UI looks complete.
+//
+// Auth endpoints (/auth/*) are live. The catalog (tracks/search/library) is
+// still served from placeholder data at the bottom of this file until those
+// endpoints exist — see the note above that section.
 
 const API_BASE_URL = "http://localhost:8000";
+const TOKEN_KEY = "melo_token";
 
-async function apiRequest(path, options = {}) {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
+// ---- token storage -------------------------------------------------------
+// localStorage keeps the session across page loads. It is readable by any
+// script on the page; if that ever becomes a concern, switch to an httpOnly
+// cookie issued by the backend.
 
-  if (!res.ok) {
-    throw new Error(`API error ${res.status}: ${res.statusText}`);
-  }
-
-  return res.json();
+function getToken() {
+  return localStorage.getItem(TOKEN_KEY);
 }
 
-// Example usage once endpoints exist:
-// const tracks = await apiRequest("/tracks");
+function setToken(token) {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+function clearToken() {
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+// ---- request helper ------------------------------------------------------
+
+async function apiRequest(path, options = {}) {
+  const headers = { ...(options.headers || {}) };
+  if (options.body) headers["Content-Type"] = "application/json";
+
+  // Attach the bearer token automatically when we have one.
+  const token = getToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  let res;
+  try {
+    res = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+  } catch {
+    // fetch only rejects on network/CORS failures.
+    throw new Error("Can't reach the server. Is the backend running?");
+  }
+
+  const isJson = (res.headers.get("content-type") || "").includes("application/json");
+  const data = isJson ? await res.json() : null;
+
+  if (!res.ok) {
+    const error = new Error(formatErrorDetail(data, res.status));
+    error.status = res.status;
+    throw error;
+  }
+
+  return data;
+}
+
+// FastAPI returns `detail` as a string for our own errors, or as a list for
+// validation (422) errors. Normalise both into a readable message.
+function formatErrorDetail(data, status) {
+  const detail = data && data.detail;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail.map((item) => item.msg || "Invalid input").join(", ");
+  }
+  return `Request failed (${status})`;
+}
+
+// ---- auth API ------------------------------------------------------------
+
+const authApi = {
+  signup(payload) {
+    return apiRequest("/auth/signup", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async login(email, password) {
+    const data = await apiRequest("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+    setToken(data.access_token);
+    return data;
+  },
+
+  me() {
+    return apiRequest("/auth/me");
+  },
+
+  logout() {
+    clearToken();
+  },
+};
 
 /* ============================================================
    Placeholder catalog
