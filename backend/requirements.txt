@@ -9,6 +9,8 @@ pydantic-settings
 email-validator
 python-jose[cryptography]
 passlib[bcrypt]
+# Reads audio duration/metadata from uploaded files.
+mutagen
 # passlib 1.7.4's bcrypt backend breaks on bcrypt >= 4.1, so pin it.
 bcrypt==4.0.1
 python-multipart
