@@ -18,7 +18,7 @@ from fastapi import (
     UploadFile,
     status,
 )
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -139,7 +139,6 @@ def stream_track(
     range: str | None = Header(None),
     db: Session = Depends(get_db),
     storage: StorageBackend = Depends(get_storage),
-    current_user: User = Depends(get_current_user),
 ):
     """Stream a track's audio file with HTTP Range request support."""
     track = db.get(Track, track_id)
@@ -188,6 +187,32 @@ def stream_track(
         status_code=status_code,
         headers=headers,
     )
+
+
+@router.get("/covers/{cover_path:path}")
+def get_cover(
+    cover_path: str,
+    storage: StorageBackend = Depends(get_storage),
+):
+    """Serve a cover image stored under the upload directory."""
+    # Guard against path traversal: the stored path is relative and we generated
+    # it ourselves, but reject anything that escapes the upload root.
+    if ".." in cover_path or cover_path.startswith("/") or cover_path.startswith("\\"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid cover path"
+        )
+
+    local_path = storage.local_path(cover_path)
+    if not local_path.exists() or not local_path.is_file():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Cover image not found"
+        )
+
+    content_type, _ = mimetypes.guess_type(str(local_path))
+    if content_type is None:
+        content_type = "application/octet-stream"
+
+    return FileResponse(local_path, media_type=content_type)
 
 
 @router.delete("/{track_id}", status_code=status.HTTP_204_NO_CONTENT)

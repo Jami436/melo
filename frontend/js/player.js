@@ -72,7 +72,11 @@ function renderNowPlaying(track) {
   npTitle.textContent = track.title;
   npArtist.textContent = track.artist;
   npCover.innerHTML =
-    typeof coverSvg === "function" ? coverSvg(track.cover || 0) : "";
+    track && track.coverUrl
+      ? `<img src="${track.coverUrl}" class="cover-art" alt="Cover" />`
+      : typeof coverSvg === "function"
+        ? coverSvg(track.cover || 0)
+        : "";
   updateProgress(0, track.duration || 0);
   document.dispatchEvent(new CustomEvent("melo:track", { detail: track }));
 }

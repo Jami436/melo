@@ -11,9 +11,7 @@ const ICONS = {
     '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h3.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H15M11 16l-4-4 4-4M7 12h9"/></svg>',
 };
 
-const likedIds = new Set(
-  PLACEHOLDER_TRACKS.filter((t) => t.liked).map((t) => t.id)
-);
+const likedIds = new Set();
 
 /* ---------- helpers ---------- */
 
@@ -31,7 +29,14 @@ function formatDuration(seconds) {
 }
 
 function trackById(id) {
-  return PLACEHOLDER_TRACKS.find((t) => t.id === id) || null;
+  return catalogTracks.find((t) => t.id === id) || null;
+}
+
+function coverImage(track) {
+  if (track && track.coverUrl) {
+    return `<img src="${escapeHtml(track.coverUrl)}" class="cover-art" alt="Cover" loading="lazy" />`;
+  }
+  return coverSvg(track && track.cover !== undefined ? track.cover : 0);
 }
 
 /* ---------- markup ---------- */
@@ -39,7 +44,7 @@ function trackById(id) {
 function trackCard(track) {
   return `<article class="card">
       <div class="card-cover">
-        ${coverSvg(track.cover)}
+        ${coverImage(track)}
         <button type="button" class="card-play" data-play="track" data-id="${track.id}"
           aria-label="Play ${escapeHtml(track.title)} by ${escapeHtml(track.artist)}">${ICONS.play}</button>
       </div>
@@ -51,7 +56,7 @@ function trackCard(track) {
 function playlistCard(playlist) {
   return `<article class="card">
       <div class="card-cover">
-        ${coverSvg(playlist.cover)}
+        ${coverImage(playlist)}
         <button type="button" class="card-play" data-play="playlist" data-id="${playlist.id}"
           aria-label="Play ${escapeHtml(playlist.title)}">${ICONS.play}</button>
       </div>
@@ -65,7 +70,7 @@ function trackRow(track) {
   return `<li class="track-row">
       <button type="button" class="track-main" data-play="track" data-id="${track.id}"
         aria-label="Play ${escapeHtml(track.title)} by ${escapeHtml(track.artist)}">
-        <span class="track-cover">${coverSvg(track.cover)}</span>
+        <span class="track-cover">${coverImage(track)}</span>
         <span class="track-info">
           <span class="track-title">${escapeHtml(track.title)}</span>
           <span class="track-artist">${escapeHtml(track.artist)}</span>
@@ -225,7 +230,7 @@ function initSearch() {
 function renderLiked() {
   const panel = document.getElementById("panel-liked");
   if (!panel) return;
-  const liked = PLACEHOLDER_TRACKS.filter((t) => likedIds.has(t.id));
+  const liked = catalogTracks.filter((t) => likedIds.has(t.id));
   if (!liked.length) {
     panel.innerHTML =
       '<div class="empty-state"><strong>No liked songs yet.</strong>' +
@@ -322,15 +327,13 @@ function handlePlay(kind, id) {
 
   if (kind === "track") {
     const track = trackById(id);
-    if (track) loadTrack(track, PLACEHOLDER_TRACKS);
+    if (track) loadTrack(track, catalogTracks);
     return;
   }
 
   if (kind === "playlist") {
-    const playlist = PLACEHOLDER_PLAYLISTS.find((p) => p.id === id);
-    if (!playlist) return;
-    const queue = playlist.tracks.map(trackById).filter(Boolean);
-    if (queue.length) loadTrack(queue[0], queue);
+    // No playlist backend yet; nothing to play.
+    return;
   }
 }
 

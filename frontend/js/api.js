@@ -94,9 +94,7 @@ const authApi = {
 };
 
 /* ============================================================
-   Placeholder catalog
-   Swap fetchCatalog / searchTracks / fetchLibrary for the
-   real apiRequest(...) calls when the endpoints exist.
+   Real catalog (backed by /tracks).
    ============================================================ */
 
 /* Cover placeholders are drawn from the palette only: a lifted
@@ -130,61 +128,44 @@ function coverSvg(index) {
   );
 }
 
-// src is intentionally empty until the backend serves audio files.
-const PLACEHOLDER_TRACKS = [
-  { id: "t1", title: "Slow Tide", artist: "Nomi Kalu", duration: 222, cover: 0, recent: true, liked: true, src: "" },
-  { id: "t2", title: "Paper Streets", artist: "Vela Rue", duration: 245, cover: 1, recent: true, src: "" },
-  { id: "t3", title: "Quiet Motion", artist: "Juniper Fields", duration: 207, cover: 2, recent: true, liked: true, src: "" },
-  { id: "t4", title: "Held Together", artist: "Marlow Bain", duration: 174, cover: 3, src: "" },
-  { id: "t5", title: "Evening Radio", artist: "Cedar House", duration: 247, cover: 4, recent: true, liked: true, src: "" },
-  { id: "t6", title: "Small Hours", artist: "Ilo Bennett", duration: 258, cover: 5, src: "" },
-  { id: "t7", title: "Runaway Light", artist: "Sable Nine", duration: 191, cover: 6, src: "" },
-  { id: "t8", title: "Open Window", artist: "Fennel Coast", duration: 229, cover: 7, recent: true, liked: true, src: "" },
-  { id: "t9", title: "Soft Landing", artist: "Aria Voss", duration: 167, cover: 8, src: "" },
-  { id: "t10", title: "First Light", artist: "Kestrel Row", duration: 216, cover: 9, liked: true, src: "" },
-  { id: "t11", title: "Midnight Cinema", artist: "Theo Lane", duration: 284, cover: 10, recent: true, src: "" },
-  { id: "t12", title: "Paper Moon", artist: "Wren Halloway", duration: 183, cover: 0, src: "" },
-];
+// Tracks fetched from /tracks, each with a src pointing at the stream endpoint.
+let catalogTracks = [];
 
-const PLACEHOLDER_PLAYLISTS = [
-  { id: "p1", title: "Late Night Drive", songs: 24, cover: 1, inLibrary: true, tracks: ["t1", "t11", "t7", "t2"] },
-  { id: "p2", title: "Slow Mornings", songs: 18, cover: 5, inLibrary: true, tracks: ["t10", "t6", "t12"] },
-  { id: "p3", title: "Deep Focus", songs: 32, cover: 3, tracks: ["t3", "t4", "t9"] },
-  { id: "p4", title: "Weekend Reset", songs: 21, cover: 7, inLibrary: true, tracks: ["t8", "t7", "t5"] },
-  { id: "p5", title: "Quiet Commute", songs: 27, cover: 2, tracks: ["t6", "t12", "t3"] },
-  { id: "p6", title: "After Hours", songs: 16, cover: 10, inLibrary: true, tracks: ["t11", "t1", "t9"] },
-];
-
-const LATENCY = { catalog: 520, search: 380, library: 460 };
-
-function delay(ms, value) {
-  return new Promise((resolve) => setTimeout(() => resolve(value), ms));
+async function fetchTracks() {
+  const { items } = await apiRequest("/tracks?page=1&size=100");
+  catalogTracks = items.map((t) => ({
+    id: String(t.id),
+    title: t.title,
+    artist: t.artist,
+    album: t.album ?? null,
+    duration: t.duration_seconds || 0,
+    cover: 0,
+    coverUrl: t.cover_path
+      ? `${API_BASE_URL}/covers/${t.cover_path}`
+      : null,
+    src: `${API_BASE_URL}/tracks/${t.id}/stream`,
+    recent: true,
+    liked: false,
+  }));
+  return catalogTracks;
 }
 
-// Placeholder replacement for apiRequest("/catalog")
+// Replaces the old placeholder catalog.
 function fetchCatalog() {
-  return delay(LATENCY.catalog, {
-    tracks: PLACEHOLDER_TRACKS,
-    playlists: PLACEHOLDER_PLAYLISTS,
-  });
+  return fetchTracks().then((tracks) => ({ tracks, playlists: [] }));
 }
 
-// Placeholder replacement for apiRequest("/search?q=...")
+// Client-side search over the fetched catalog (no search endpoint yet).
 function searchTracks(query) {
   const q = String(query || "").trim().toLowerCase();
-  const hits = !q
-    ? []
-    : PLACEHOLDER_TRACKS.filter(
-        (t) =>
-          t.title.toLowerCase().includes(q) ||
-          t.artist.toLowerCase().includes(q)
-      );
-  return delay(LATENCY.search, hits);
+  if (!q) return Promise.resolve([]);
+  const hits = catalogTracks.filter(
+    (t) => t.title.toLowerCase().includes(q) || t.artist.toLowerCase().includes(q)
+  );
+  return Promise.resolve(hits);
 }
 
-// Placeholder replacement for apiRequest("/library")
+// No playlists backend yet, so the library starts empty.
 function fetchLibrary() {
-  return delay(LATENCY.library, {
-    playlists: PLACEHOLDER_PLAYLISTS.filter((p) => p.inLibrary),
-  });
+  return Promise.resolve({ playlists: [] });
 }
