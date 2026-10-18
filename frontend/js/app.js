@@ -241,6 +241,7 @@ function initLibrary() {
 
   const panelPlaylists = document.getElementById("panel-playlists");
   const panelLiked = document.getElementById("panel-liked");
+  if (!panelPlaylists || !panelLiked) return;
 
   panelPlaylists.innerHTML = cardSkeletons(4);
 
