@@ -240,28 +240,37 @@ function renderLiked() {
   panel.innerHTML = `<ul class="track-list">${liked.map(trackRow).join("")}</ul>`;
 }
 
+function renderPlaylists(playlists) {
+  const panel = document.getElementById("panel-playlists");
+  if (!panel) return;
+  panel.setAttribute("aria-busy", "false");
+  if (!playlists.length) {
+    panel.innerHTML =
+      '<div class="empty-state"><strong>No playlists yet.</strong>' +
+      "<p>Create your first playlist below.</p></div>";
+    return;
+  }
+  panel.innerHTML = `<div class="card-grid">${playlists
+    .map(playlistCard)
+    .join("")}</div>`;
+}
+
 function initLibrary() {
   const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
   if (!tabs.length) return;
 
   const panelPlaylists = document.getElementById("panel-playlists");
   const panelLiked = document.getElementById("panel-liked");
-  if (!panelPlaylists || !panelLiked) return;
 
   panelPlaylists.innerHTML = cardSkeletons(4);
 
   async function loadPlaylists() {
-    const { playlists } = await fetchLibrary();
-    panelPlaylists.setAttribute("aria-busy", "false");
-    if (!playlists.length) {
-      panelPlaylists.innerHTML =
-        '<div class="empty-state"><strong>No playlists yet.</strong>' +
-        "<p>Made-for-you mixes will land here.</p></div>";
-      return;
+    try {
+      const { playlists } = await fetchLibrary();
+      renderPlaylists(playlists);
+    } catch {
+      renderPlaylists([]);
     }
-    panelPlaylists.innerHTML = `<div class="card-grid">${playlists
-      .map(playlistCard)
-      .join("")}</div>`;
   }
 
   function selectTab(tab) {
@@ -289,6 +298,60 @@ function initLibrary() {
   });
 
   loadPlaylists();
+}
+
+function initCreatePlaylist() {
+  const btn = document.getElementById("create-playlist-btn");
+  const dialog = document.getElementById("create-playlist-dialog");
+  const form = document.getElementById("create-playlist-form");
+  const cancel = document.getElementById("cancel-create-playlist");
+  const message = document.getElementById("create-playlist-message");
+  if (!btn || !dialog || !form) return;
+
+  function showMessage(text, isError = false) {
+    if (!message) return;
+    message.textContent = text;
+    message.classList.toggle("is-error", isError);
+  }
+
+  btn.addEventListener("click", () => {
+    showMessage("");
+    form.reset();
+    dialog.showModal();
+  });
+
+  cancel.addEventListener("click", () => {
+    dialog.close();
+    showMessage("");
+  });
+
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) dialog.close();
+  });
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const data = new FormData(form);
+    const name = String(data.get("name") || "").trim();
+    const isPublic = data.get("is_public") === "on";
+    if (!name) {
+      showMessage("Please enter a playlist name.", true);
+      return;
+    }
+    const submit = form.querySelector('button[type="submit"]');
+    submit.disabled = true;
+    showMessage("Creating playlist…");
+    try {
+      await playlistsApi.create(name, isPublic);
+      dialog.close();
+      showMessage("");
+      loadPlaylists();
+    } catch (err) {
+      showMessage(err.message || "Failed to create playlist.", true);
+    } finally {
+      submit.disabled = false;
+    }
+  });
 }
 
 /* ---------- likes ---------- */
@@ -504,6 +567,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initHome();
   initSearch();
   initLibrary();
+  initCreatePlaylist();
   initAccount();
   initAuthPage();
 });

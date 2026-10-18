@@ -559,6 +559,80 @@
   color: var(--cream);
 }
 
+/* ---------- create playlist dialog ---------- */
+
+.btn-create-playlist {
+  margin-bottom: 20px;
+  padding: 10px 16px;
+  border-radius: var(--r-md);
+  background: var(--cream);
+  color: var(--bg);
+  font-size: 0.925rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform var(--t), opacity var(--t);
+}
+
+.btn-create-playlist:hover {
+  transform: translateY(-1px);
+  opacity: 0.95;
+}
+
+dialog {
+  border: none;
+  border-radius: var(--r-lg);
+  padding: 0;
+  background: var(--surface);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.dialog-title {
+  font-size: 1.35rem;
+  letter-spacing: -0.01em;
+  margin-bottom: 20px;
+}
+
+.field-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--cream-55);
+  margin-bottom: 16px;
+  cursor: pointer;
+}
+
+.field-checkbox input {
+  flex: none;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.btn-cancel {
+  padding: 10px 18px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  color: var(--cream-55);
+  font-size: 0.925rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color var(--t), border-color var(--t);
+}
+
+.btn-cancel:hover {
+  color: var(--cream);
+  border-color: var(--cream-16);
+}
+
 /* ---------- responsive ---------- */
 
 @media (max-width: 860px) {

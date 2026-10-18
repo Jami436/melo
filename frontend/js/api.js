@@ -93,6 +93,19 @@ const authApi = {
   },
 };
 
+const playlistsApi = {
+  list() {
+    return apiRequest("/playlists");
+  },
+
+  create(name, isPublic = true) {
+    return apiRequest("/playlists", {
+      method: "POST",
+      body: JSON.stringify({ name, is_public: isPublic }),
+    });
+  },
+};
+
 /* ============================================================
    Real catalog (backed by /tracks).
    ============================================================ */
@@ -167,5 +180,5 @@ function searchTracks(query) {
 
 // No playlists backend yet, so the library starts empty.
 function fetchLibrary() {
-  return Promise.resolve({ playlists: [] });
+  return playlistsApi.list().then((playlists) => ({ playlists }));
 }

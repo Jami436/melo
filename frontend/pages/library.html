@@ -48,8 +48,33 @@
         <button type="button" class="tab" id="tab-liked" role="tab" aria-selected="false" aria-controls="panel-liked" tabindex="-1">Liked Songs</button>
       </div>
 
-      <div id="panel-playlists" role="tabpanel" aria-labelledby="tab-playlists" aria-busy="true"></div>
+      <div id="panel-playlists" role="tabpanel" aria-labelledby="tab-playlists" aria-busy="true">
+        <button type="button" class="btn-create-playlist" id="create-playlist-btn">+ Create playlist</button>
+      </div>
       <div id="panel-liked" role="tabpanel" aria-labelledby="tab-liked" hidden></div>
+
+      <dialog id="create-playlist-dialog">
+        <form id="create-playlist-form">
+          <div class="auth-card">
+            <h2 class="dialog-title">Create playlist</h2>
+            <div class="field">
+              <span class="field-label">Playlist name</span>
+              <input type="text" name="name" placeholder="e.g. Late Night Drive" required minlength="1" maxlength="255" />
+            </div>
+            <div class="field">
+              <label class="field-checkbox">
+                <input type="checkbox" name="is_public" checked />
+                <span>Public playlist</span>
+              </label>
+            </div>
+            <p class="auth-message" id="create-playlist-message" role="status" aria-live="polite"></p>
+            <div class="dialog-actions">
+              <button type="button" class="btn-cancel" id="cancel-create-playlist">Cancel</button>
+              <button type="submit" class="btn-primary" id="submit-create-playlist">Create</button>
+            </div>
+          </div>
+        </form>
+      </dialog>
     </main>
   </div>
 
