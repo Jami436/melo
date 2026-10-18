@@ -4,17 +4,21 @@ All storage work is delegated to ``app.services.storage``; this module only
 handles HTTP concerns (validation of form fields, auth, status codes).
 """
 
+import mimetypes
+
 from fastapi import (
     APIRouter,
     Depends,
     File,
     Form,
+    Header,
     HTTPException,
     Query,
     Response,
     UploadFile,
     status,
 )
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -22,6 +26,7 @@ from app.db import get_db
 from app.dependencies import get_current_user
 from app.models import Track, User
 from app.schemas.track import TrackOut, TrackPage
+from app.services.streaming import CHUNK_SIZE, RangeError, iter_file, parse_range
 from app.services.storage import (
     AUDIO_EXTENSIONS,
     IMAGE_EXTENSIONS,
@@ -126,6 +131,63 @@ def get_track(track_id: int, db: Session = Depends(get_db)) -> Track:
             status_code=status.HTTP_404_NOT_FOUND, detail="Track not found"
         )
     return track
+
+
+@router.get("/{track_id}/stream")
+def stream_track(
+    track_id: int,
+    range: str | None = Header(None),
+    db: Session = Depends(get_db),
+    storage: StorageBackend = Depends(get_storage),
+    current_user: User = Depends(get_current_user),
+):
+    """Stream a track's audio file with HTTP Range request support."""
+    track = db.get(Track, track_id)
+    if track is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Track not found"
+        )
+
+    local_path = storage.local_path(track.file_path)
+    if not local_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Audio file not found"
+        )
+
+    file_size = local_path.stat().st_size
+
+    try:
+        start, end = parse_range(range, file_size)
+    except RangeError:
+        return Response(
+            status_code=status.HTTP_416_REQUESTED_RANGE_NOT_SATISFIABLE,
+            headers={"Content-Range": f"bytes */{file_size}"},
+        )
+
+    last_byte = file_size - 1 if end is None else end
+    content_length = last_byte - start + 1
+
+    content_type, _ = mimetypes.guess_type(str(local_path))
+    if content_type is None:
+        content_type = "application/octet-stream"
+
+    headers = {
+        "Accept-Ranges": "bytes",
+        "Content-Type": content_type,
+        "Content-Length": str(content_length),
+    }
+
+    if range is not None:
+        headers["Content-Range"] = f"bytes {start}-{last_byte}/{file_size}"
+        status_code = status.HTTP_206_PARTIAL_CONTENT
+    else:
+        status_code = status.HTTP_200_OK
+
+    return StreamingResponse(
+        iter_file(local_path, start, end),
+        status_code=status_code,
+        headers=headers,
+    )
 
 
 @router.delete("/{track_id}", status_code=status.HTTP_204_NO_CONTENT)

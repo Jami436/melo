@@ -6,6 +6,7 @@ import wave
 import pytest
 
 from app.main import app
+from app.services.streaming import RangeError, parse_range
 from app.services.storage import LocalStorage, get_storage
 
 
@@ -220,3 +221,108 @@ def test_owner_delete_removes_row_and_file(client, storage):
     assert response.status_code == 204
     assert not path.exists()
     assert client.get(f"/tracks/{track['id']}").status_code == 404
+
+
+# --------------------------------------------------------------- stream ----
+
+
+def test_stream_without_range_returns_full_file(client, storage):
+    token = register_and_token(client)
+    track = upload(client, token).json()
+    path = storage.local_path(track["file_path"])
+    file_size = path.stat().st_size
+    expected = path.read_bytes()
+
+    response = client.get(f"/tracks/{track['id']}/stream", headers=auth(token))
+
+    assert response.status_code == 200
+    assert response.headers["accept-ranges"] == "bytes"
+    assert response.headers["content-length"] == str(file_size)
+    assert response.content == expected
+
+
+def test_stream_normal_range_returns_206(client, storage):
+    token = register_and_token(client)
+    track = upload(client, token).json()
+    path = storage.local_path(track["file_path"])
+    file_size = path.stat().st_size
+    start, end = 100, 500
+    expected = path.read_bytes()[start : end + 1]
+
+    response = client.get(
+        f"/tracks/{track['id']}/stream",
+        headers={**auth(token), "Range": f"bytes={start}-{end}"},
+    )
+
+    assert response.status_code == 206
+    assert response.headers["content-range"] == f"bytes {start}-{end}/{file_size}"
+    assert response.headers["content-length"] == str(len(expected))
+    assert response.content == expected
+
+
+def test_stream_open_ended_range(client, storage):
+    token = register_and_token(client)
+    track = upload(client, token).json()
+    path = storage.local_path(track["file_path"])
+    file_size = path.stat().st_size
+    start = 500
+    expected = path.read_bytes()[start:]
+
+    response = client.get(
+        f"/tracks/{track['id']}/stream",
+        headers={**auth(token), "Range": f"bytes={start}-"},
+    )
+
+    assert response.status_code == 206
+    assert response.headers["content-range"] == f"bytes {start}-{file_size - 1}/{file_size}"
+    assert response.headers["content-length"] == str(len(expected))
+    assert response.content == expected
+
+
+def test_stream_out_of_bounds_range_returns_416(client, storage):
+    token = register_and_token(client)
+    track = upload(client, token).json()
+    path = storage.local_path(track["file_path"])
+    file_size = path.stat().st_size
+
+    response = client.get(
+        f"/tracks/{track['id']}/stream",
+        headers={**auth(token), "Range": f"bytes={file_size}-"},
+    )
+
+    assert response.status_code == 416
+    assert response.headers["content-range"] == f"bytes */{file_size}"
+
+
+# ------------------------------------------------------------------ unit ----
+
+
+def test_parse_range_none_returns_full():
+    assert parse_range(None, 1000) == (0, None)
+
+
+def test_parse_range_normal():
+    assert parse_range("bytes=100-500", 1000) == (100, 500)
+
+
+def test_parse_range_open_ended():
+    assert parse_range("bytes=500-", 1000) == (500, None)
+
+
+def test_parse_range_end_clamped_to_file_size():
+    assert parse_range("bytes=100-9999", 1000) == (100, 999)
+
+
+def test_parse_range_start_beyond_size_raises():
+    with pytest.raises(RangeError):
+        parse_range("bytes=1000-", 1000)
+
+
+def test_parse_range_invalid_unit_raises():
+    with pytest.raises(RangeError):
+        parse_range("items=0-10", 1000)
+
+
+def test_parse_range_suffix_range_raises():
+    with pytest.raises(RangeError):
+        parse_range("bytes=-500", 1000)
