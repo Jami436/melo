@@ -1,8 +1,7 @@
 // Central place for all calls to the Melo FastAPI backend.
 //
-// Auth endpoints (/auth/*) are live. The catalog (tracks/search/library) is
-// still served from placeholder data at the bottom of this file until those
-// endpoints exist — see the note above that section.
+// Every request goes through apiRequest(), which attaches the JWT from
+// localStorage. Auth, tracks, uploads and streaming are all backed by the API.
 
 const API_BASE_URL = "http://localhost:8000";
 const TOKEN_KEY = "melo_token";
@@ -28,7 +27,14 @@ function clearToken() {
 
 async function apiRequest(path, options = {}) {
   const headers = { ...(options.headers || {}) };
-  if (options.body) headers["Content-Type"] = "application/json";
+  const isFormData =
+    typeof FormData !== "undefined" && options.body instanceof FormData;
+
+  // Only JSON bodies get a JSON content type. FormData must be left alone so
+  // the browser can add its multipart boundary.
+  if (options.body && !isFormData && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
 
   // Attach the bearer token automatically when we have one.
   const token = getToken();
@@ -41,6 +47,8 @@ async function apiRequest(path, options = {}) {
     // fetch only rejects on network/CORS failures.
     throw new Error("Can't reach the server. Is the backend running?");
   }
+
+  if (res.status === 204) return null;
 
   const isJson = (res.headers.get("content-type") || "").includes("application/json");
   const data = isJson ? await res.json() : null;
@@ -67,30 +75,32 @@ function formatErrorDetail(data, status) {
 
 // ---- auth API ------------------------------------------------------------
 
+function signup(payload) {
+  return apiRequest("/auth/signup", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+async function login(email, password) {
+  const data = await apiRequest("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+  setToken(data.access_token);
+  return data;
+}
+
+function getMe() {
+  return apiRequest("/auth/me");
+}
+
+// Backwards-compatible wrapper used by the existing page bootstrap.
 const authApi = {
-  signup(payload) {
-    return apiRequest("/auth/signup", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-  },
-
-  async login(email, password) {
-    const data = await apiRequest("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    });
-    setToken(data.access_token);
-    return data;
-  },
-
-  me() {
-    return apiRequest("/auth/me");
-  },
-
-  logout() {
-    clearToken();
-  },
+  signup,
+  login,
+  me: getMe,
+  logout: clearToken,
 };
 
 const playlistsApi = {
@@ -141,11 +151,38 @@ function coverSvg(index) {
   );
 }
 
+// ---- tracks API ----------------------------------------------------------
+
+function getTracks(page = 1, size = 100) {
+  return apiRequest(`/tracks?page=${encodeURIComponent(page)}&size=${encodeURIComponent(size)}`);
+}
+
+function getStreamUrl(trackId) {
+  return `${API_BASE_URL}/tracks/${encodeURIComponent(trackId)}/stream`;
+}
+
+function getCoverUrl(coverPath) {
+  if (!coverPath) return null;
+  return `${API_BASE_URL}/tracks/covers/${coverPath}`;
+}
+
+function uploadTrack({ file, title, artist, album, cover } = {}) {
+  const body = new FormData();
+  body.append("file", file);
+  body.append("title", title);
+  body.append("artist", artist);
+  if (album) body.append("album", album);
+  if (cover) body.append("cover", cover);
+
+  return apiRequest("/tracks/upload", { method: "POST", body });
+}
+
 // Tracks fetched from /tracks, each with a src pointing at the stream endpoint.
 let catalogTracks = [];
+let catalogRequest = null;
 
 async function fetchTracks() {
-  const { items } = await apiRequest("/tracks?page=1&size=100");
+  const { items } = await getTracks();
   catalogTracks = items.map((t) => ({
     id: String(t.id),
     title: t.title,
@@ -153,32 +190,41 @@ async function fetchTracks() {
     album: t.album ?? null,
     duration: t.duration_seconds || 0,
     cover: 0,
-    coverUrl: t.cover_path
-      ? `${API_BASE_URL}/covers/${t.cover_path}`
-      : null,
-    src: `${API_BASE_URL}/tracks/${t.id}/stream`,
+    coverUrl: getCoverUrl(t.cover_path),
+    src: getStreamUrl(t.id),
     recent: true,
     liked: false,
   }));
   return catalogTracks;
 }
 
-// Replaces the old placeholder catalog.
+// Load the catalog once even if several pages need it at the same time.
+function ensureCatalog() {
+  if (catalogTracks.length) return Promise.resolve(catalogTracks);
+  if (!catalogRequest) {
+    catalogRequest = fetchTracks().finally(() => {
+      catalogRequest = null;
+    });
+  }
+  return catalogRequest;
+}
+
+// Catalog bundle consumed by the home page.
 function fetchCatalog() {
   return fetchTracks().then((tracks) => ({ tracks, playlists: [] }));
 }
 
 // Client-side search over the fetched catalog (no search endpoint yet).
-function searchTracks(query) {
+async function searchTracks(query) {
   const q = String(query || "").trim().toLowerCase();
-  if (!q) return Promise.resolve([]);
-  const hits = catalogTracks.filter(
+  if (!q) return [];
+  await ensureCatalog();
+  return catalogTracks.filter(
     (t) => t.title.toLowerCase().includes(q) || t.artist.toLowerCase().includes(q)
   );
-  return Promise.resolve(hits);
 }
 
-// No playlists backend yet, so the library starts empty.
+// Library = the authenticated user's playlists.
 function fetchLibrary() {
   return playlistsApi.list().then((playlists) => ({ playlists }));
 }
