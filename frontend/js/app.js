@@ -1,5 +1,5 @@
-// App bootstrap — page rendering, search, library and likes.
-// Consumes the placeholder catalog from api.js.
+// App bootstrap — page rendering, search, library, uploads and likes.
+// Consumes the live catalog from api.js.
 
 const ICONS = {
   play: '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 5.6v12.8L19 12z"/></svg>',
@@ -14,6 +14,26 @@ const ICONS = {
 const likedIds = new Set();
 
 /* ---------- helpers ---------- */
+
+function isPagesDir() {
+  return /(^|\/)pages\//.test(window.location.pathname);
+}
+
+function loginHref() {
+  return isPagesDir() ? "login.html" : "pages/login.html";
+}
+
+function indexHref() {
+  return isPagesDir() ? "../index.html" : "index.html";
+}
+
+function stateMarkup(title, text, retry = false) {
+  return `<div class="empty-state">
+      <strong>${escapeHtml(title)}</strong>
+      <p>${escapeHtml(text)}</p>
+      ${retry ? '<button type="button" class="btn-state" data-retry>Try again</button>' : ""}
+    </div>`;
+}
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (c) =>
@@ -42,7 +62,8 @@ function coverImage(track) {
 /* ---------- markup ---------- */
 
 function trackCard(track) {
-  return `<article class="card">
+  return `<article class="card" data-play="track" data-id="${track.id}" tabindex="0"
+      role="button" aria-label="Play ${escapeHtml(track.title)} by ${escapeHtml(track.artist)}">
       <div class="card-cover">
         ${coverImage(track)}
         <button type="button" class="card-play" data-play="track" data-id="${track.id}"
@@ -137,18 +158,57 @@ async function initHome() {
 
   setGreeting();
 
-  if (row) row.innerHTML = cardSkeletons(5);
-  if (grid) grid.innerHTML = cardSkeletons(6);
-
-  const { tracks, playlists } = await fetchCatalog();
-
   if (row) {
-    row.innerHTML = tracks.filter((t) => t.recent).map(trackCard).join("");
-    row.setAttribute("aria-busy", "false");
+    row.innerHTML = cardSkeletons(5);
+    row.setAttribute("aria-busy", "true");
   }
   if (grid) {
-    grid.innerHTML = playlists.map(playlistCard).join("");
-    grid.setAttribute("aria-busy", "false");
+    grid.innerHTML = cardSkeletons(6);
+    grid.setAttribute("aria-busy", "true");
+  }
+
+  try {
+    const { tracks, playlists } = await fetchCatalog();
+
+    if (row) {
+      row.classList.toggle("is-state", tracks.length === 0);
+      row.innerHTML = tracks.length
+        ? tracks.map(trackCard).join("")
+        : stateMarkup(
+            "Your library is empty.",
+            "Upload a track to start listening.",
+            false
+          );
+      row.setAttribute("aria-busy", "false");
+    }
+
+    if (grid) {
+      grid.innerHTML = playlists.length
+        ? playlists.map(playlistCard).join("")
+        : stateMarkup(
+            "No playlists yet.",
+            "Create one from your library.",
+            false
+          );
+      grid.setAttribute("aria-busy", "false");
+    }
+  } catch (err) {
+    const message = err.message || "Something went wrong while loading your music.";
+    if (row) {
+      row.classList.add("is-state");
+      row.innerHTML = stateMarkup("Couldn't load your music.", message, true);
+      row.setAttribute("aria-busy", "false");
+    }
+    if (grid) {
+      grid.innerHTML = stateMarkup("Couldn't load your music.", message, true);
+      grid.setAttribute("aria-busy", "false");
+    }
+
+    [row, grid].filter(Boolean).forEach((container) => {
+      container.querySelectorAll("[data-retry]").forEach((btn) => {
+        btn.addEventListener("click", initHome);
+      });
+    });
   }
 }
 
@@ -210,8 +270,20 @@ function initSearch() {
     results.innerHTML = rowSkeletons(4);
 
     timer = setTimeout(async () => {
-      const hits = await searchTracks(query);
-      renderResults(hits, query);
+      try {
+        const hits = await searchTracks(query);
+        renderResults(hits, query);
+      } catch (err) {
+        results.innerHTML = "";
+        results.setAttribute("aria-busy", "false");
+        label.hidden = true;
+        empty.hidden = false;
+        empty.innerHTML = stateMarkup(
+          "Couldn't search right now.",
+          err.message || "Check the connection and try again."
+        );
+        status.textContent = "Search failed";
+      }
     }, 180);
   });
 
@@ -241,16 +313,18 @@ function renderLiked() {
 }
 
 function renderPlaylists(playlists) {
-  const panel = document.getElementById("panel-playlists");
-  if (!panel) return;
-  panel.setAttribute("aria-busy", "false");
+  const content =
+    document.getElementById("playlists-content") ||
+    document.getElementById("panel-playlists");
+  if (!content) return;
+  content.setAttribute("aria-busy", "false");
   if (!playlists.length) {
-    panel.innerHTML =
+    content.innerHTML =
       '<div class="empty-state"><strong>No playlists yet.</strong>' +
-      "<p>Create your first playlist below.</p></div>";
+      "<p>Create your first playlist above.</p></div>";
     return;
   }
-  panel.innerHTML = `<div class="card-grid">${playlists
+  content.innerHTML = `<div class="card-grid">${playlists
     .map(playlistCard)
     .join("")}</div>`;
 }
@@ -261,17 +335,26 @@ function initLibrary() {
 
   const panelPlaylists = document.getElementById("panel-playlists");
   const panelLiked = document.getElementById("panel-liked");
+  const playlistContent =
+    document.getElementById("playlists-content") || panelPlaylists;
 
-  panelPlaylists.innerHTML = cardSkeletons(4);
+  playlistContent.innerHTML = cardSkeletons(4);
+  playlistContent.setAttribute("aria-busy", "true");
 
   async function loadPlaylists() {
     try {
       const { playlists } = await fetchLibrary();
       renderPlaylists(playlists);
-    } catch {
-      renderPlaylists([]);
+    } catch (err) {
+      playlistContent.innerHTML = stateMarkup(
+        "Couldn't load your playlists.",
+        err.message || "Check the connection and try again."
+      );
+      playlistContent.setAttribute("aria-busy", "false");
     }
   }
+
+  document.addEventListener("melo:playlists", loadPlaylists);
 
   function selectTab(tab) {
     tabs.forEach((t) => {
@@ -345,11 +428,59 @@ function initCreatePlaylist() {
       await playlistsApi.create(name, isPublic);
       dialog.close();
       showMessage("");
-      loadPlaylists();
+      document.dispatchEvent(new CustomEvent("melo:playlists"));
     } catch (err) {
       showMessage(err.message || "Failed to create playlist.", true);
     } finally {
       submit.disabled = false;
+    }
+  });
+}
+
+/* ---------- upload ---------- */
+
+function initUploadForm() {
+  const form = document.getElementById("upload-form");
+  if (!form) return;
+
+  const message = document.getElementById("upload-message");
+  const submit = form.querySelector('button[type="submit"]');
+
+  function showMessage(text, isError = false) {
+    if (!message) return;
+    message.textContent = text;
+    message.classList.toggle("is-error", isError);
+  }
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const data = new FormData(form);
+    const title = String(data.get("title") || "").trim();
+    const artist = String(data.get("artist") || "").trim();
+    const file = data.get("file");
+
+    if (!title || !artist) {
+      showMessage("Please add a title and artist.", true);
+      return;
+    }
+    if (!file || !file.name) {
+      showMessage("Please choose an audio file.", true);
+      return;
+    }
+
+    if (submit) submit.disabled = true;
+    showMessage("Uploading…");
+
+    try {
+      const track = await uploadTrack({ title, artist, file });
+      form.reset();
+      showMessage(`Uploaded “${track.title}”. It's now on Home.`);
+      await fetchTracks().catch(() => {});
+    } catch (err) {
+      showMessage(err.message || "Upload failed. Please try again.", true);
+    } finally {
+      if (submit) submit.disabled = false;
     }
   });
 }
@@ -389,8 +520,17 @@ function handlePlay(kind, id) {
   if (typeof loadTrack !== "function") return;
 
   if (kind === "track") {
-    const track = trackById(id);
-    if (track) loadTrack(track, catalogTracks);
+    const source = trackById(id);
+    if (!source) return;
+    const withStreams = catalogTracks.map((t) => ({
+      ...t,
+      src: getStreamUrl(t.id),
+    }));
+    const track = withStreams.find((t) => t.id === id) || {
+      ...source,
+      src: getStreamUrl(source.id),
+    };
+    loadTrack(track, withStreams);
     return;
   }
 
@@ -409,6 +549,14 @@ document.addEventListener("click", (event) => {
 
   const likeEl = event.target.closest("[data-like]");
   if (likeEl) toggleLike(likeEl.dataset.like);
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  const card = event.target.closest('[data-play][role="button"]');
+  if (!card) return;
+  event.preventDefault();
+  handlePlay(card.dataset.play, card.dataset.id);
 });
 
 document.addEventListener("melo:track", (event) => {
@@ -445,7 +593,7 @@ async function initAccount() {
   if (!slot) return; // no sidebar on this page (e.g. the auth page)
 
   const sidebar = document.getElementById("sidebar");
-  const authHref = (sidebar && sidebar.dataset.authHref) || "pages/auth.html";
+  const authHref = (sidebar && sidebar.dataset.authHref) || loginHref();
 
   if (!getToken()) {
     slot.innerHTML = `<a class="account-btn" href="${authHref}">${ICONS.user}<span>Log in</span></a>`;
@@ -455,9 +603,13 @@ async function initAccount() {
   try {
     const user = await authApi.me();
     renderAccountUser(slot, user, authHref);
-  } catch {
-    // Token missing/expired/invalid — drop it and show the signed-out state.
+  } catch (err) {
+    // Token missing/expired/invalid — send the user back to login.
     clearToken();
+    if (err.status === 401) {
+      window.location.replace(authHref);
+      return;
+    }
     slot.innerHTML = `<a class="account-btn" href="${authHref}">${ICONS.user}<span>Log in</span></a>`;
   }
 }
@@ -481,46 +633,30 @@ function renderAccountUser(slot, user, authHref) {
 
 /* ---------- auth page ---------- */
 
-function initAuthPage() {
+async function initAuthPage() {
   const loginForm = document.getElementById("login-form");
   const signupForm = document.getElementById("signup-form");
-  if (!loginForm && !signupForm) return; // not on the auth page
+  if (!loginForm && !signupForm) return; // not on an auth page
 
   const message = document.getElementById("auth-message");
-  const logo = document.querySelector(".auth-logo");
-  const homeHref = (logo && logo.getAttribute("href")) || "../index.html";
+  const homeHref = indexHref();
 
-  const tabs = Array.from(document.querySelectorAll(".auth-tabs [role='tab']"));
-  const panels = { login: document.getElementById("panel-login"), signup: document.getElementById("panel-signup") };
+  // Already signed in? Go straight to the app.
+  if (getToken()) {
+    try {
+      await getMe();
+      window.location.replace(homeHref);
+      return;
+    } catch (err) {
+      if (err.status === 401) clearToken();
+    }
+  }
 
   function showMessage(text, isError = false) {
     if (!message) return;
     message.textContent = text;
     message.classList.toggle("is-error", isError);
   }
-
-  function selectTab(tab) {
-    tabs.forEach((t) => {
-      const on = t === tab;
-      t.setAttribute("aria-selected", String(on));
-      t.tabIndex = on ? 0 : -1;
-    });
-    Object.entries(panels).forEach(([key, panel]) => {
-      if (panel) panel.hidden = key !== tab.dataset.panel;
-    });
-    showMessage("");
-  }
-
-  tabs.forEach((tab, i) => {
-    tab.addEventListener("click", () => selectTab(tab));
-    tab.addEventListener("keydown", (e) => {
-      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
-      e.preventDefault();
-      const next = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
-      next.focus();
-      selectTab(next);
-    });
-  });
 
   async function withPending(form, pendingText, run) {
     const submit = form.querySelector('button[type="submit"]');
@@ -536,25 +672,32 @@ function initAuthPage() {
   }
 
   if (loginForm) {
-    loginForm.addEventListener("submit", (e) => {
-      e.preventDefault();
+    loginForm.addEventListener("submit", (event) => {
+      event.preventDefault();
       const data = new FormData(loginForm);
       withPending(loginForm, "Logging in…", async () => {
-        await authApi.login(String(data.get("email") || "").trim(), String(data.get("password") || ""));
+        await login(
+          String(data.get("email") || "").trim(),
+          String(data.get("password") || "")
+        );
         window.location.href = homeHref;
       });
     });
   }
 
   if (signupForm) {
-    signupForm.addEventListener("submit", (e) => {
-      e.preventDefault();
+    signupForm.addEventListener("submit", (event) => {
+      event.preventDefault();
       const data = new FormData(signupForm);
       const email = String(data.get("email") || "").trim();
       const password = String(data.get("password") || "");
       withPending(signupForm, "Creating your account…", async () => {
-        await authApi.signup({ email, username: String(data.get("username") || "").trim(), password });
-        await authApi.login(email, password); // log straight in after signup
+        await signup({
+          email,
+          username: String(data.get("username") || "").trim(),
+          password,
+        });
+        await login(email, password); // log straight in after signup
         window.location.href = homeHref;
       });
     });
@@ -564,10 +707,18 @@ function initAuthPage() {
 /* ---------- boot ---------- */
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Any page with the sidebar requires a session.
+  const protectedPage = Boolean(document.getElementById("account-slot"));
+  if (protectedPage && !getToken()) {
+    window.location.replace(loginHref());
+    return;
+  }
+
   initHome();
   initSearch();
   initLibrary();
   initCreatePlaylist();
+  initUploadForm();
   initAccount();
   initAuthPage();
 });

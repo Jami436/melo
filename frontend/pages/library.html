@@ -17,7 +17,7 @@
   <a class="skip-link" href="#main-content">Skip to content</a>
 
   <div id="app">
-    <aside id="sidebar" data-auth-href="auth.html">
+    <aside id="sidebar" data-auth-href="login.html">
       <a class="logo" href="../index.html" aria-label="Melo home">Melo</a>
       <nav aria-label="Primary">
         <a href="../index.html">
@@ -43,13 +43,43 @@
         <p class="sub">Playlists you made and songs you kept.</p>
       </header>
 
+      <section class="upload-section" aria-labelledby="upload-heading">
+        <div class="upload-card">
+          <div class="upload-copy">
+            <h2 class="upload-title" id="upload-heading">Upload a track</h2>
+            <p class="sub">Add an audio file to your collection.</p>
+          </div>
+          <form id="upload-form" class="upload-form" enctype="multipart/form-data">
+            <div class="upload-grid">
+              <label class="field">
+                <span class="field-label">Title</span>
+                <input type="text" name="title" placeholder="e.g. Midnight Drive" maxlength="255" required />
+              </label>
+              <label class="field">
+                <span class="field-label">Artist</span>
+                <input type="text" name="artist" placeholder="e.g. The Night Owls" maxlength="255" required />
+              </label>
+              <label class="field upload-file-field">
+                <span class="field-label">Audio file</span>
+                <input type="file" name="file" accept=".mp3,.wav,.ogg,.flac,audio/*" required />
+              </label>
+            </div>
+            <div class="upload-actions">
+              <p class="auth-message upload-message" id="upload-message" role="status" aria-live="polite"></p>
+              <button type="submit" class="btn-primary upload-submit" id="upload-submit">Upload track</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
       <div class="tabs" role="tablist" aria-label="Library sections">
         <button type="button" class="tab" id="tab-playlists" role="tab" aria-selected="true" aria-controls="panel-playlists">Playlists</button>
         <button type="button" class="tab" id="tab-liked" role="tab" aria-selected="false" aria-controls="panel-liked" tabindex="-1">Liked Songs</button>
       </div>
 
-      <div id="panel-playlists" role="tabpanel" aria-labelledby="tab-playlists" aria-busy="true">
+      <div id="panel-playlists" role="tabpanel" aria-labelledby="tab-playlists">
         <button type="button" class="btn-create-playlist" id="create-playlist-btn">+ Create playlist</button>
+        <div id="playlists-content" aria-busy="true"></div>
       </div>
       <div id="panel-liked" role="tabpanel" aria-labelledby="tab-liked" hidden></div>
 

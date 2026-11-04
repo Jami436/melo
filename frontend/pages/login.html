@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Melo — Log in</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='42' fill='%23F5EDE0'/></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/base.css" />
+  <link rel="stylesheet" href="../css/layout.css" />
+  <link rel="stylesheet" href="../css/player.css" />
+</head>
+<body>
+
+  <a class="skip-link" href="#main-content">Skip to content</a>
+
+  <div id="app">
+    <main id="main-content" class="auth-main">
+      <div class="auth-card">
+        <a class="auth-logo" href="../index.html" aria-label="Melo home">Melo</a>
+
+        <h1 class="auth-title">Welcome back</h1>
+        <p class="auth-sub">Log in to keep listening.</p>
+
+        <form id="login-form">
+          <label class="field">
+            <span class="field-label">Email</span>
+            <input type="email" name="email" autocomplete="email" placeholder="you@example.com" required />
+          </label>
+          <label class="field">
+            <span class="field-label">Password</span>
+            <input type="password" name="password" autocomplete="current-password" placeholder="Your password" minlength="8" required />
+          </label>
+          <button type="submit" class="btn-primary" id="login-submit">Log in</button>
+          <p class="auth-message" id="auth-message" role="alert" aria-live="assertive"></p>
+        </form>
+
+        <p class="auth-switch">New to Melo? <a href="signup.html">Create an account</a></p>
+      </div>
+    </main>
+  </div>
+
+  <script src="../js/api.js"></script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

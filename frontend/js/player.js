@@ -23,6 +23,7 @@ const repeatBtn = document.getElementById("repeat-btn");
 const SIM_STEP = 0.25;
 
 let isPlaying = false;
+let isSeeking = false;
 let queue = [];
 let index = -1;
 let shuffle = false;
@@ -91,7 +92,7 @@ function setSource(track) {
   }
 }
 
-// ---- simulation (placeholder tracks have no audio file) ----
+// ---- fallback timer for tracks without a playable source ----
 
 function startSim() {
   stopSim();
@@ -237,7 +238,7 @@ repeatBtn.addEventListener("click", () => {
   repeatBtn.setAttribute("aria-pressed", String(repeat));
 });
 
-progressBar.addEventListener("input", () => {
+function seekToSliderValue() {
   const track = currentTrack();
   if (!track) return;
   const total =
@@ -251,17 +252,42 @@ progressBar.addEventListener("input", () => {
     simTime = target;
   }
   updateProgress(target, total);
+}
+
+progressBar.addEventListener("pointerdown", () => {
+  isSeeking = true;
+});
+
+progressBar.addEventListener("input", () => {
+  isSeeking = true;
+  seekToSliderValue();
+});
+
+progressBar.addEventListener("change", () => {
+  seekToSliderValue();
+  isSeeking = false;
+});
+
+window.addEventListener("pointerup", () => {
+  isSeeking = false;
 });
 
 audio.addEventListener("timeupdate", () => {
   const track = currentTrack();
-  if (!hasSource(track)) return;
+  if (!hasSource(track) || isSeeking) return;
   updateProgress(audio.currentTime, audio.duration || track.duration || 0);
 });
 
 audio.addEventListener("loadedmetadata", () => {
   const track = currentTrack();
   if (track) updateProgress(audio.currentTime, audio.duration || track.duration || 0);
+});
+
+audio.addEventListener("error", () => {
+  const track = currentTrack();
+  if (!track || !hasSource(track)) return;
+  npArtist.textContent = "Couldn't play this track";
+  pauseTrack();
 });
 
 audio.addEventListener("ended", onEnded);
@@ -278,6 +304,7 @@ setFill(volumeFill, Number(volumeSlider.value) * 100);
 document.addEventListener("keydown", (event) => {
   if (event.code !== "Space" && event.key !== " ") return;
   const el = event.target;
+  if (el && el.closest && el.closest('[data-play][role="button"]')) return;
   const tag = el && el.tagName ? el.tagName.toLowerCase() : "";
   if (
     tag === "input" ||
