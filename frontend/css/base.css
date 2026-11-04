@@ -222,6 +222,22 @@ h3 {
   font-size: 0.925rem;
 }
 
+.btn-state {
+  margin-top: 16px;
+  padding: 9px 18px;
+  border-radius: var(--r-pill);
+  background: var(--cream);
+  color: var(--bg);
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: transform var(--t), opacity var(--t);
+}
+
+.btn-state:hover {
+  transform: translateY(-1px);
+  opacity: 0.95;
+}
+
 /* ---- skeletons ---- */
 
 .skeleton {
