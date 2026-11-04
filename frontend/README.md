@@ -4,7 +4,7 @@ Plain static frontend, no framework or build step.
 
 ## Structure
 - `index.html` — home page
-- `pages/` — additional pages (search, library)
+- `pages/` — additional pages (login, signup, search, library)
 - `css/` — `base.css` (reset/variables), `layout.css`, `player.css`
 - `js/` — `api.js` (backend calls), `player.js` (audio controls), `app.js` (bootstrap)
 - `assets/` — images, icons
