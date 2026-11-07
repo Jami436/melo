@@ -34,3 +34,10 @@ class TrackPage(BaseModel):
     total: int
     page: int
     size: int
+
+
+class LikeStatus(BaseModel):
+    """Result of liking a track (idempotent)."""
+
+    track_id: int
+    liked: bool
