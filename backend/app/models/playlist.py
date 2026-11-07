@@ -35,6 +35,11 @@ class Playlist(Base, TimestampMixin):
         order_by="PlaylistTrack.position",
     )
 
+    @property
+    def track_count(self) -> int:
+        """Number of tracks in the playlist (used by summary responses)."""
+        return len(self.items)
+
 
 class PlaylistTrack(Base):
     """Association object: one track's place inside one playlist.
