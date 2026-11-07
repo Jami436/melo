@@ -20,12 +20,13 @@ from fastapi import (
 )
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.dependencies import get_current_user
-from app.models import Track, User
-from app.schemas.track import TrackOut, TrackPage
+from app.models import LikedTrack, Track, User
+from app.schemas.track import LikeStatus, TrackOut, TrackPage
 from app.services.streaming import CHUNK_SIZE, RangeError, iter_file, parse_range
 from app.services.storage import (
     AUDIO_EXTENSIONS,
@@ -131,6 +132,53 @@ def get_track(track_id: int, db: Session = Depends(get_db)) -> Track:
             status_code=status.HTTP_404_NOT_FOUND, detail="Track not found"
         )
     return track
+
+
+@router.post("/{track_id}/like", response_model=LikeStatus)
+def like_track(
+    track_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> LikeStatus:
+    """Like a track. Liking an already-liked track is a no-op."""
+    track = db.get(Track, track_id)
+    if track is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Track not found"
+        )
+
+    existing = db.get(LikedTrack, (current_user.id, track_id))
+    if existing is None:
+        db.add(LikedTrack(user_id=current_user.id, track_id=track_id))
+        try:
+            db.commit()
+        except IntegrityError:
+            # Another request liked it at the same time; the composite PK
+            # guarantees only one row, so treat this as success.
+            db.rollback()
+
+    return LikeStatus(track_id=track_id, liked=True)
+
+
+@router.delete("/{track_id}/like", status_code=status.HTTP_204_NO_CONTENT)
+def unlike_track(
+    track_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    """Remove a like. Unliking a track that isn't liked is a no-op."""
+    track = db.get(Track, track_id)
+    if track is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Track not found"
+        )
+
+    existing = db.get(LikedTrack, (current_user.id, track_id))
+    if existing is not None:
+        db.delete(existing)
+        db.commit()
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/{track_id}/stream")
