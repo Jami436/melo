@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import auth, playlists, tracks
+from app.routers import auth, me, playlists, tracks
 
 app = FastAPI(title="Melo API", version="0.1.0")
 
@@ -25,5 +25,6 @@ def health():
 
 
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(me.router, prefix="/me", tags=["me"])
 app.include_router(tracks.router, prefix="/tracks", tags=["tracks"])
 app.include_router(playlists.router, prefix="/playlists", tags=["playlists"])
