@@ -9,9 +9,17 @@ const ICONS = {
     '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12.5a4.25 4.25 0 1 0 0-8.5 4.25 4.25 0 0 0 0 8.5zM4.5 20a7.5 7.5 0 0 1 15 0z"/></svg>',
   logout:
     '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h3.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H15M11 16l-4-4 4-4M7 12h9"/></svg>',
+  plus:
+    '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>',
+  close:
+    '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12"/><path d="m18 6-12 12"/></svg>',
 };
 
 const likedIds = new Set();
+let likedTracks = [];
+let playlistQueue = [];
+let activePlaylistId = null;
+let addToPlaylistDialog = null;
 
 /* ---------- helpers ---------- */
 
@@ -25,6 +33,12 @@ function loginHref() {
 
 function indexHref() {
   return isPagesDir() ? "../index.html" : "index.html";
+}
+
+function playlistHref(id) {
+  return isPagesDir()
+    ? `playlist.html?id=${encodeURIComponent(id)}`
+    : `pages/playlist.html?id=${encodeURIComponent(id)}`;
 }
 
 function stateMarkup(title, text, retry = false) {
@@ -66,6 +80,8 @@ function trackCard(track) {
       role="button" aria-label="Play ${escapeHtml(track.title)} by ${escapeHtml(track.artist)}">
       <div class="card-cover">
         ${coverImage(track)}
+        <button type="button" class="card-add" data-add-to-playlist="${track.id}"
+          aria-label="Add ${escapeHtml(track.title)} to a playlist" title="Add to playlist">${ICONS.plus}</button>
         <button type="button" class="card-play" data-play="track" data-id="${track.id}"
           aria-label="Play ${escapeHtml(track.title)} by ${escapeHtml(track.artist)}">${ICONS.play}</button>
       </div>
@@ -75,21 +91,24 @@ function trackCard(track) {
 }
 
 function playlistCard(playlist) {
-  return `<article class="card">
+  return `<article class="card" data-play="playlist" data-id="${playlist.id}" tabindex="0"
+      role="button" aria-label="Open ${escapeHtml(playlist.title)}">
       <div class="card-cover">
         ${coverImage(playlist)}
         <button type="button" class="card-play" data-play="playlist" data-id="${playlist.id}"
-          aria-label="Play ${escapeHtml(playlist.title)}">${ICONS.play}</button>
+          aria-label="Open ${escapeHtml(playlist.title)}">${ICONS.play}</button>
       </div>
       <h3 class="card-title">${escapeHtml(playlist.title)}</h3>
-      <p class="card-sub">${playlist.songs} songs</p>
+      <p class="card-sub">${playlist.songs} song${playlist.songs === 1 ? "" : "s"}</p>
     </article>`;
 }
 
-function trackRow(track) {
+function trackRow(track, options = {}) {
   const liked = likedIds.has(track.id);
+  const playKind = options.playKind || "track";
+  const remove = options.remove === true;
   return `<li class="track-row">
-      <button type="button" class="track-main" data-play="track" data-id="${track.id}"
+      <button type="button" class="track-main" data-play="${playKind}" data-id="${track.id}"
         aria-label="Play ${escapeHtml(track.title)} by ${escapeHtml(track.artist)}">
         <span class="track-cover">${coverImage(track)}</span>
         <span class="track-info">
@@ -98,6 +117,14 @@ function trackRow(track) {
         </span>
         <span class="track-dur">${formatDuration(track.duration)}</span>
       </button>
+      <button type="button" class="icon-btn track-action" data-add-to-playlist="${track.id}"
+        aria-label="Add ${escapeHtml(track.title)} to a playlist" title="Add to playlist">${ICONS.plus}</button>
+      ${
+        remove
+          ? `<button type="button" class="icon-btn track-action track-remove" data-remove-track="${track.id}"
+        aria-label="Remove ${escapeHtml(track.title)} from this playlist" title="Remove from playlist">${ICONS.close}</button>`
+          : ""
+      }
       <button type="button" class="icon-btn heart-btn" data-like="${track.id}"
         aria-label="${liked ? "Remove from" : "Save to"} Liked Songs" aria-pressed="${liked}">${ICONS.heart}</button>
     </li>`;
@@ -299,17 +326,34 @@ function initSearch() {
 
 /* ---------- library ---------- */
 
-function renderLiked() {
+async function renderLiked() {
   const panel = document.getElementById("panel-liked");
   if (!panel) return;
-  const liked = catalogTracks.filter((t) => likedIds.has(t.id));
-  if (!liked.length) {
-    panel.innerHTML =
-      '<div class="empty-state"><strong>No liked songs yet.</strong>' +
-      "<p>Tap the heart on any track to save it here.</p></div>";
-    return;
+  panel.setAttribute("aria-busy", "true");
+  panel.innerHTML = `<ul class="track-list">${rowSkeletons(3)}</ul>`;
+  try {
+    likedTracks = await fetchLikedTracks();
+    likedIds.clear();
+    likedTracks.forEach((track) => likedIds.add(track.id));
+    likedTracks.forEach((track) => syncLikeButtons(track.id));
+
+    if (!likedTracks.length) {
+      panel.innerHTML =
+        '<div class="empty-state"><strong>No liked songs yet.</strong>' +
+        "<p>Tap the heart on any track to save it here.</p></div>";
+      return;
+    }
+    panel.innerHTML = `<ul class="track-list">${likedTracks
+      .map((track) => trackRow(track))
+      .join("")}</ul>`;
+  } catch (err) {
+    panel.innerHTML = stateMarkup(
+      "Couldn't load liked songs.",
+      err.message || "Check the connection and try again."
+    );
+  } finally {
+    panel.setAttribute("aria-busy", "false");
   }
-  panel.innerHTML = `<ul class="track-list">${liked.map(trackRow).join("")}</ul>`;
 }
 
 function renderPlaylists(playlists) {
@@ -437,6 +481,209 @@ function initCreatePlaylist() {
   });
 }
 
+/* ---------- add to playlist ---------- */
+
+function ensureAddToPlaylistDialog() {
+  if (addToPlaylistDialog) return addToPlaylistDialog;
+
+  addToPlaylistDialog = document.createElement("dialog");
+  addToPlaylistDialog.id = "add-to-playlist-dialog";
+  addToPlaylistDialog.innerHTML = `<form method="dialog">
+      <div class="auth-card add-dialog-card">
+        <h2 class="dialog-title">Add to playlist</h2>
+        <p class="sub" id="add-to-playlist-sub">Choose a playlist.</p>
+        <ul class="add-playlist-list" id="add-to-playlist-list"></ul>
+        <p class="auth-message" id="add-to-playlist-message" role="status" aria-live="polite"></p>
+        <div class="dialog-actions">
+          <button type="submit" class="btn-cancel">Close</button>
+        </div>
+      </div>
+    </form>`;
+  document.body.appendChild(addToPlaylistDialog);
+
+  addToPlaylistDialog.addEventListener("click", (event) => {
+    if (event.target === addToPlaylistDialog) addToPlaylistDialog.close();
+  });
+
+  const list = addToPlaylistDialog.querySelector("#add-to-playlist-list");
+  list.addEventListener("click", async (event) => {
+    const btn = event.target.closest("[data-add-target]");
+    if (!btn) return;
+    const message = addToPlaylistDialog.querySelector("#add-to-playlist-message");
+    btn.disabled = true;
+    message.classList.remove("is-error");
+    message.textContent = "Adding…";
+    try {
+      await playlistsApi.addTrack(btn.dataset.addTarget, btn.dataset.addTrack);
+      message.textContent = `Added to “${btn.dataset.addName}”.`;
+      document.dispatchEvent(new CustomEvent("melo:playlists"));
+      if (
+        activePlaylistId &&
+        String(btn.dataset.addTarget) === String(activePlaylistId)
+      ) {
+        await initPlaylistPage();
+      }
+    } catch (err) {
+      message.classList.add("is-error");
+      message.textContent = err.message || "Couldn't add this track.";
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  return addToPlaylistDialog;
+}
+
+async function openAddToPlaylist(trackId) {
+  const dialog = ensureAddToPlaylistDialog();
+  const list = dialog.querySelector("#add-to-playlist-list");
+  const message = dialog.querySelector("#add-to-playlist-message");
+
+  message.textContent = "";
+  message.classList.remove("is-error");
+  list.innerHTML = '<li class="add-playlist-empty">Loading…</li>';
+  if (!dialog.open) dialog.showModal();
+
+  try {
+    const playlists = (await playlistsApi.list()).map(normalizePlaylist);
+    if (!playlists.length) {
+      list.innerHTML =
+        '<li class="add-playlist-empty">No playlists yet. Create one in your library.</li>';
+      return;
+    }
+    list.innerHTML = playlists
+      .map(
+        (playlist) => `<li>
+          <button type="button" class="add-playlist-option"
+            data-add-target="${playlist.id}" data-add-track="${trackId}"
+            data-add-name="${escapeHtml(playlist.name)}">
+            <span class="add-playlist-cover">${coverSvg(playlist.cover)}</span>
+            <span class="add-playlist-copy">
+              <span class="add-playlist-name">${escapeHtml(playlist.name)}</span>
+              <span class="add-playlist-meta">${playlist.songs} song${playlist.songs === 1 ? "" : "s"}</span>
+            </span>
+          </button>
+        </li>`
+      )
+      .join("");
+  } catch (err) {
+    list.innerHTML = "";
+    message.classList.add("is-error");
+    message.textContent = err.message || "Couldn't load your playlists.";
+  }
+}
+
+/* ---------- playlist page ---------- */
+
+function renderPlaylistPage(playlist) {
+  document.title = `Melo — ${playlist.name}`;
+
+  const name = document.getElementById("playlist-name");
+  if (name) name.textContent = playlist.name;
+
+  const meta = document.getElementById("playlist-meta");
+  if (meta) {
+    const count = playlist.tracks.length;
+    meta.textContent = `${count} song${count === 1 ? "" : "s"} · ${
+      playlist.is_public ? "Public" : "Private"
+    }`;
+  }
+
+  const cover = document.getElementById("playlist-cover");
+  if (cover) cover.innerHTML = coverSvg(playlist.cover);
+
+  const playAll = document.getElementById("playlist-play-all");
+  if (playAll) {
+    playAll.disabled = playlist.tracks.length === 0;
+    playAll.onclick = () => {
+      if (playlistQueue.length) loadTrack(playlistQueue[0], playlistQueue);
+    };
+  }
+
+  const list = document.getElementById("playlist-tracks");
+  const empty = document.getElementById("playlist-empty");
+  if (!list) return;
+  list.setAttribute("aria-busy", "false");
+
+  if (!playlist.tracks.length) {
+    list.innerHTML = "";
+    if (empty) empty.hidden = false;
+    return;
+  }
+
+  if (empty) empty.hidden = true;
+  list.innerHTML = playlist.tracks
+    .map((track) => trackRow(track, { playKind: "playlist-track", remove: true }))
+    .join("");
+}
+
+async function initPlaylistPage() {
+  const page = document.getElementById("playlist-page");
+  if (!page) return;
+
+  const id = new URLSearchParams(window.location.search).get("id");
+  const list = document.getElementById("playlist-tracks");
+  const empty = document.getElementById("playlist-empty");
+  const message = document.getElementById("playlist-message");
+
+  if (message) {
+    message.textContent = "";
+    message.classList.remove("is-error");
+  }
+
+  if (!id) {
+    if (list) list.innerHTML = "";
+    if (empty) {
+      empty.hidden = false;
+      empty.innerHTML =
+        "<strong>No playlist selected.</strong><p>Open a playlist from your library.</p>";
+    }
+    return;
+  }
+
+  activePlaylistId = id;
+  if (list) {
+    list.innerHTML = rowSkeletons(4);
+    list.setAttribute("aria-busy", "true");
+  }
+  if (empty) empty.hidden = true;
+
+  try {
+    const playlist = await fetchPlaylist(id);
+    playlistQueue = playlist.tracks;
+    renderPlaylistPage(playlist);
+  } catch (err) {
+    if (list) {
+      list.innerHTML = "";
+      list.setAttribute("aria-busy", "false");
+    }
+    if (empty) {
+      empty.hidden = false;
+      empty.innerHTML = stateMarkup(
+        "Couldn't load this playlist.",
+        err.message || "Check the connection and try again.",
+        true
+      );
+      const retry = empty.querySelector("[data-retry]");
+      if (retry) retry.addEventListener("click", initPlaylistPage);
+    }
+  }
+}
+
+async function removeTrackFromPlaylist(trackId) {
+  if (!activePlaylistId) return;
+  const message = document.getElementById("playlist-message");
+  try {
+    await playlistsApi.removeTrack(activePlaylistId, trackId);
+    await initPlaylistPage();
+  } catch (err) {
+    if (message) {
+      message.textContent = err.message || "Couldn't remove this track.";
+      message.classList.add("is-error");
+    }
+  }
+}
+
 /* ---------- upload ---------- */
 
 function initUploadForm() {
@@ -487,6 +734,17 @@ function initUploadForm() {
 
 /* ---------- likes ---------- */
 
+async function initLikes() {
+  if (!getToken()) return;
+  try {
+    likedTracks = await fetchLikedTracks();
+    likedIds.clear();
+    likedTracks.forEach((track) => likedIds.add(track.id));
+  } catch (err) {
+    // Hearts simply default to unliked if the request fails.
+  }
+}
+
 function syncLikeButtons(id) {
   const on = likedIds.has(id);
   document.querySelectorAll(`[data-like="${id}"]`).forEach((btn) => {
@@ -501,14 +759,36 @@ function syncLikeButtons(id) {
   });
 }
 
-function toggleLike(id) {
+async function toggleLike(id) {
   if (!id) return;
-  if (likedIds.has(id)) {
-    likedIds.delete(id);
-  } else {
-    likedIds.add(id);
-  }
+
+  const wasLiked = likedIds.has(id);
+  const source =
+    trackById(id) ||
+    likedTracks.find((track) => track.id === id) ||
+    (typeof currentTrack === "function" ? currentTrack() : null);
+
+  // Update the heart immediately; revert if the request fails.
+  if (wasLiked) likedIds.delete(id);
+  else likedIds.add(id);
   syncLikeButtons(id);
+
+  try {
+    if (wasLiked) {
+      await likesApi.unlike(id);
+      likedTracks = likedTracks.filter((track) => track.id !== id);
+    } else {
+      await likesApi.like(id);
+      if (source && !likedTracks.some((track) => track.id === id)) {
+        likedTracks.unshift({ ...source, liked: true });
+      }
+    }
+  } catch (err) {
+    if (wasLiked) likedIds.add(id);
+    else likedIds.delete(id);
+    syncLikeButtons(id);
+    return;
+  }
 
   const likedPanel = document.getElementById("panel-liked");
   if (likedPanel && !likedPanel.hidden) renderLiked();
@@ -520,27 +800,44 @@ function handlePlay(kind, id) {
   if (typeof loadTrack !== "function") return;
 
   if (kind === "track") {
-    const source = trackById(id);
+    const source =
+      trackById(id) || likedTracks.find((track) => track.id === id);
     if (!source) return;
     const withStreams = catalogTracks.map((t) => ({
       ...t,
       src: getStreamUrl(t.id),
     }));
-    const track = withStreams.find((t) => t.id === id) || {
-      ...source,
-      src: getStreamUrl(source.id),
-    };
-    loadTrack(track, withStreams);
+    const queue = withStreams.some((t) => t.id === id) ? withStreams : [source];
+    loadTrack(source, queue);
     return;
   }
 
   if (kind === "playlist") {
-    // No playlist backend yet; nothing to play.
+    window.location.href = playlistHref(id);
+    return;
+  }
+
+  if (kind === "playlist-track") {
+    const source = playlistQueue.find((track) => track.id === id);
+    if (!source) return;
+    loadTrack(source, playlistQueue);
     return;
   }
 }
 
 document.addEventListener("click", (event) => {
+  const addEl = event.target.closest("[data-add-to-playlist]");
+  if (addEl) {
+    openAddToPlaylist(addEl.dataset.addToPlaylist);
+    return;
+  }
+
+  const removeEl = event.target.closest("[data-remove-track]");
+  if (removeEl) {
+    removeTrackFromPlaylist(removeEl.dataset.removeTrack);
+    return;
+  }
+
   const playEl = event.target.closest("[data-play]");
   if (playEl) {
     handlePlay(playEl.dataset.play, playEl.dataset.id);
@@ -553,6 +850,7 @@ document.addEventListener("click", (event) => {
 
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Enter" && event.key !== " ") return;
+  if (event.target.closest && event.target.closest("button")) return;
   const card = event.target.closest('[data-play][role="button"]');
   if (!card) return;
   event.preventDefault();
@@ -706,7 +1004,7 @@ async function initAuthPage() {
 
 /* ---------- boot ---------- */
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   // Any page with the sidebar requires a session.
   const protectedPage = Boolean(document.getElementById("account-slot"));
   if (protectedPage && !getToken()) {
@@ -714,10 +1012,13 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
+  await initLikes();
+
   initHome();
   initSearch();
   initLibrary();
   initCreatePlaylist();
+  initPlaylistPage();
   initUploadForm();
   initAccount();
   initAuthPage();

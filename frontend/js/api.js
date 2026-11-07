@@ -108,13 +108,84 @@ const playlistsApi = {
     return apiRequest("/playlists");
   },
 
+  get(id) {
+    return apiRequest(`/playlists/${encodeURIComponent(id)}`);
+  },
+
   create(name, isPublic = true) {
     return apiRequest("/playlists", {
       method: "POST",
       body: JSON.stringify({ name, is_public: isPublic }),
     });
   },
+
+  update(id, payload) {
+    return apiRequest(`/playlists/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  remove(id) {
+    return apiRequest(`/playlists/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+  },
+
+  addTrack(id, trackId) {
+    return apiRequest(`/playlists/${encodeURIComponent(id)}/tracks`, {
+      method: "POST",
+      body: JSON.stringify({ track_id: Number(trackId) }),
+    });
+  },
+
+  removeTrack(id, trackId) {
+    return apiRequest(
+      `/playlists/${encodeURIComponent(id)}/tracks/${encodeURIComponent(trackId)}`,
+      { method: "DELETE" }
+    );
+  },
+
+  reorder(id, trackIds) {
+    return apiRequest(`/playlists/${encodeURIComponent(id)}/reorder`, {
+      method: "PUT",
+      body: JSON.stringify({ track_ids: trackIds.map(Number) }),
+    });
+  },
 };
+
+const likesApi = {
+  list() {
+    return apiRequest("/me/likes");
+  },
+
+  like(id) {
+    return apiRequest(`/tracks/${encodeURIComponent(id)}/like`, {
+      method: "POST",
+    });
+  },
+
+  unlike(id) {
+    return apiRequest(`/tracks/${encodeURIComponent(id)}/like`, {
+      method: "DELETE",
+    });
+  },
+};
+
+function normalizePlaylist(playlist) {
+  const id = String(playlist.id);
+  return {
+    id,
+    name: playlist.name,
+    title: playlist.name,
+    owner_id: playlist.owner_id,
+    is_public: playlist.is_public,
+    created_at: playlist.created_at,
+    songs: playlist.track_count ?? 0,
+    track_count: playlist.track_count ?? 0,
+    cover: Number(playlist.id) || 0,
+  };
+}
 
 /* ============================================================
    Real catalog (backed by /tracks).
@@ -177,25 +248,34 @@ function uploadTrack({ file, title, artist, album, cover } = {}) {
   return apiRequest("/tracks/upload", { method: "POST", body });
 }
 
+function normalizeTrack(track) {
+  return {
+    id: String(track.id),
+    title: track.title,
+    artist: track.artist,
+    album: track.album ?? null,
+    duration: track.duration_seconds || 0,
+    cover: Number(track.id) || 0,
+    coverUrl: getCoverUrl(track.cover_path),
+    src: getStreamUrl(track.id),
+    recent: true,
+    liked: false,
+  };
+}
+
 // Tracks fetched from /tracks, each with a src pointing at the stream endpoint.
 let catalogTracks = [];
 let catalogRequest = null;
 
 async function fetchTracks() {
   const { items } = await getTracks();
-  catalogTracks = items.map((t) => ({
-    id: String(t.id),
-    title: t.title,
-    artist: t.artist,
-    album: t.album ?? null,
-    duration: t.duration_seconds || 0,
-    cover: 0,
-    coverUrl: getCoverUrl(t.cover_path),
-    src: getStreamUrl(t.id),
-    recent: true,
-    liked: false,
-  }));
+  catalogTracks = items.map(normalizeTrack);
   return catalogTracks;
+}
+
+async function fetchLikedTracks() {
+  const items = await likesApi.list();
+  return items.map(normalizeTrack);
 }
 
 // Load the catalog once even if several pages need it at the same time.
@@ -210,8 +290,12 @@ function ensureCatalog() {
 }
 
 // Catalog bundle consumed by the home page.
-function fetchCatalog() {
-  return fetchTracks().then((tracks) => ({ tracks, playlists: [] }));
+async function fetchCatalog() {
+  const [tracks, playlists] = await Promise.all([
+    fetchTracks(),
+    playlistsApi.list().then((items) => items.map(normalizePlaylist)),
+  ]);
+  return { tracks, playlists };
 }
 
 // Client-side search over the fetched catalog (no search endpoint yet).
@@ -226,5 +310,15 @@ async function searchTracks(query) {
 
 // Library = the authenticated user's playlists.
 function fetchLibrary() {
-  return playlistsApi.list().then((playlists) => ({ playlists }));
+  return playlistsApi
+    .list()
+    .then((playlists) => ({ playlists: playlists.map(normalizePlaylist) }));
+}
+
+async function fetchPlaylist(id) {
+  const playlist = await playlistsApi.get(id);
+  return {
+    ...normalizePlaylist(playlist),
+    tracks: (playlist.tracks || []).map(normalizeTrack),
+  };
 }
