@@ -176,6 +176,39 @@
   margin-left: 1px;
 }
 
+.card-add {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--cream);
+  border: 1px solid var(--line);
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity var(--t), transform var(--t), background-color var(--t);
+}
+
+.card-add .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.card-add:hover {
+  background: var(--cream-10);
+}
+
+.card:hover .card-add,
+.card:focus-within .card-add,
+.card-add:focus-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .card:hover,
 .card:focus-within {
   transform: translateY(-4px);
@@ -756,6 +789,150 @@ dialog::backdrop {
   border-color: var(--cream-16);
 }
 
+/* ---------- track actions ---------- */
+
+.track-action {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  opacity: 0.65;
+}
+
+.track-action .icon {
+  width: 17px;
+  height: 17px;
+}
+
+.track-row:hover .track-action,
+.track-action:focus-visible {
+  opacity: 1;
+}
+
+.track-remove:hover {
+  color: var(--cream);
+}
+
+/* ---------- add-to-playlist dialog ---------- */
+
+.add-dialog-card {
+  max-width: 420px;
+}
+
+.add-dialog-card .sub {
+  margin-bottom: 14px;
+}
+
+.add-playlist-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 320px;
+  overflow-y: auto;
+  margin: 0 -8px;
+}
+
+.add-playlist-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-radius: var(--r-md);
+  text-align: left;
+  transition: background-color var(--t);
+}
+
+.add-playlist-option:hover {
+  background: var(--cream-06);
+}
+
+.add-playlist-cover {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+
+.add-playlist-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.add-playlist-name {
+  font-size: 0.925rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.add-playlist-meta,
+.add-playlist-empty {
+  font-size: 0.8rem;
+  color: var(--cream-55);
+}
+
+.add-playlist-empty {
+  padding: 16px 8px;
+  text-align: center;
+}
+
+/* ---------- playlist page ---------- */
+
+.playlist-head {
+  display: flex;
+  align-items: flex-end;
+  gap: 26px;
+  margin-bottom: 36px;
+}
+
+.playlist-cover {
+  width: clamp(140px, 22vw, 210px);
+  aspect-ratio: 1;
+  flex: none;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.playlist-head-copy {
+  min-width: 0;
+  padding-bottom: 6px;
+}
+
+.playlist-head-copy h1 {
+  font-size: clamp(1.9rem, 5vw, 3.2rem);
+  letter-spacing: -0.03em;
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+}
+
+.playlist-head-copy .sub {
+  margin-top: 8px;
+}
+
+.playlist-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.playlist-play {
+  width: auto;
+  margin-top: 0;
+  padding: 11px 28px;
+}
+
+.playlist-message {
+  text-align: left;
+  margin: 0 0 12px;
+}
+
 /* ---------- responsive ---------- */
 
 @media (max-width: 860px) {
@@ -865,3 +1042,22 @@ dialog::backdrop {
     margin-bottom: 34px;
   }
 }
+
+@media (max-width: 640px) {
+  .playlist-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .playlist-cover {
+    width: 130px;
+  }
+
+  .track-action {
+    opacity: 1;
+    width: 30px;
+    height: 30px;
+  }
+}
+
