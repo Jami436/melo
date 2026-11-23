@@ -334,6 +334,31 @@
   margin-bottom: 14px;
 }
 
+.search-group:not([hidden]) + .search-group:not([hidden]) {
+  margin-top: 32px;
+}
+
+.search-group .results-label {
+  margin-bottom: 8px;
+}
+
+.artist-hit .track-dur {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  color: var(--cream-55);
+}
+
+.search-more {
+  display: block;
+  margin: 24px auto 0;
+}
+
+.search-more[hidden] {
+  display: none;
+}
+
+
 /* ---------- track list ---------- */
 
 .track-list {
