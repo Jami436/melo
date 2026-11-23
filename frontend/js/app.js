@@ -17,6 +17,7 @@ const ICONS = {
 
 const likedIds = new Set();
 let likedTracks = [];
+let searchTracksCache = [];
 let playlistQueue = [];
 let activePlaylistId = null;
 let addToPlaylistDialog = null;
@@ -127,6 +128,21 @@ function trackRow(track, options = {}) {
       }
       <button type="button" class="icon-btn heart-btn" data-like="${track.id}"
         aria-label="${liked ? "Remove from" : "Save to"} Liked Songs" aria-pressed="${liked}">${ICONS.heart}</button>
+    </li>`;
+}
+
+function artistRow(artist) {
+  const track = artist.topTrack;
+  return `<li class="track-row artist-hit">
+      <button type="button" class="track-main" data-play="search-track" data-id="${track.id}"
+        aria-label="Play ${escapeHtml(track.title)} by ${escapeHtml(artist.name)}">
+        <span class="track-cover">${coverImage(track)}</span>
+        <span class="track-info">
+          <span class="track-title">${escapeHtml(artist.name)}</span>
+          <span class="track-artist">${artist.trackCount} song${artist.trackCount === 1 ? "" : "s"}</span>
+        </span>
+        <span class="track-dur">${ICONS.play}</span>
+      </button>
     </li>`;
 }
 
@@ -246,44 +262,149 @@ function initSearch() {
   if (!input) return;
 
   const results = document.getElementById("search-results");
+  const artistResults = document.getElementById("artist-results");
+  const trackGroup = document.getElementById("track-group");
+  const artistGroup = document.getElementById("artist-group");
+  const trackLabel = document.getElementById("track-label");
+  const artistLabel = document.getElementById("artist-label");
   const empty = document.getElementById("search-empty");
   const label = document.getElementById("results-label");
   const clear = document.getElementById("search-clear");
   const status = document.getElementById("search-status");
+  const more = document.getElementById("search-more");
+
+  const delay = 300;
+  const size = 20;
   let timer = null;
+  let requestId = 0;
+  let activeQuery = "";
+  let currentPage = 0;
+  let shownTracks = [];
+  let shownArtists = [];
 
   function reset() {
+    requestId += 1;
+    timer = clearTimeout(timer);
+    activeQuery = "";
+    currentPage = 0;
+    shownTracks = [];
+    shownArtists = [];
+    searchTracksCache = [];
     results.innerHTML = "";
+    artistResults.innerHTML = "";
     results.setAttribute("aria-busy", "false");
+    artistResults.setAttribute("aria-busy", "false");
+    trackGroup.hidden = true;
+    artistGroup.hidden = true;
+    trackLabel.hidden = true;
+    artistLabel.hidden = true;
     label.hidden = true;
+    more.hidden = true;
     empty.hidden = false;
     empty.innerHTML =
       "<strong>Nothing here yet.</strong><p>Search for something you love.</p>";
     status.textContent = "";
   }
 
-  function renderResults(hits, query) {
+  function showLoading() {
+    empty.hidden = true;
+    label.hidden = true;
+    more.hidden = true;
+    trackGroup.hidden = false;
+    artistGroup.hidden = true;
+    results.setAttribute("aria-busy", "true");
+    artistResults.setAttribute("aria-busy", "false");
+    results.innerHTML = rowSkeletons(4);
+    artistResults.innerHTML = "";
+  }
+
+  function renderNoResults(query) {
+    results.innerHTML = "";
+    artistResults.innerHTML = "";
     results.setAttribute("aria-busy", "false");
-    if (!hits.length) {
-      results.innerHTML = "";
-      label.hidden = true;
-      empty.hidden = false;
-      empty.innerHTML =
-        `<strong>No matches for “${escapeHtml(query)}”.</strong>` +
-        "<p>Try another artist, or a shorter search.</p>";
-      status.textContent = `No results for ${query}`;
-      return;
+    trackGroup.hidden = true;
+    artistGroup.hidden = true;
+    label.hidden = true;
+    more.hidden = true;
+    empty.hidden = false;
+    empty.innerHTML =
+      `<strong>No matches for “${escapeHtml(query)}”.</strong>` +
+      "<p>Try another artist, or a shorter search.</p>";
+    status.textContent = `No results for ${query}`;
+  }
+
+  function renderError(err) {
+    results.innerHTML = "";
+    artistResults.innerHTML = "";
+    results.setAttribute("aria-busy", "false");
+    trackGroup.hidden = true;
+    artistGroup.hidden = true;
+    label.hidden = true;
+    more.hidden = true;
+    empty.hidden = false;
+    empty.innerHTML = stateMarkup(
+      "Couldn't search right now.",
+      err.message || "Check the connection and try again."
+    );
+    status.textContent = "Search failed";
+  }
+
+  function renderData(data, append) {
+    if (!append) {
+      shownTracks = [];
+      shownArtists = [];
     }
+    shownTracks.push(...data.tracks);
+    shownArtists.push(...data.artists);
+
+    results.innerHTML = shownTracks
+      .map((track) => trackRow(track, { playKind: "search-track" }))
+      .join("");
+    artistResults.innerHTML = shownArtists.map(artistRow).join("");
+    results.setAttribute("aria-busy", "false");
+    artistResults.setAttribute("aria-busy", "false");
+
     empty.hidden = true;
     label.hidden = false;
-    label.textContent = `${hits.length} result${hits.length > 1 ? "s" : ""}`;
-    results.innerHTML = hits.map(trackRow).join("");
-    status.textContent = `${hits.length} results`;
+    label.textContent =
+      `${data.trackTotal} track${data.trackTotal === 1 ? "" : "s"}` +
+      ` · ${data.artistTotal} artist${data.artistTotal === 1 ? "" : "s"}`;
+    trackLabel.textContent = `Tracks (${data.trackTotal})`;
+    artistLabel.textContent = `Artists (${data.artistTotal})`;
+    trackGroup.hidden = shownTracks.length === 0;
+    artistGroup.hidden = shownArtists.length === 0;
+    more.hidden = currentPage * size >= Math.max(data.trackTotal, data.artistTotal);
+    more.removeAttribute("aria-busy");
+    status.textContent = `${data.trackTotal} tracks, ${data.artistTotal} artists`;
+
+    const byId = new Map();
+    [...shownTracks, ...shownArtists.map((artist) => artist.topTrack)].forEach(
+      (track) => byId.set(track.id, track)
+    );
+    searchTracksCache = Array.from(byId.values());
+  }
+
+  async function runSearch(query, page, append, id) {
+    try {
+      const data = await searchTracks(query, page, size);
+      if (id !== requestId) return;
+      if (!append && data.trackTotal === 0 && data.artistTotal === 0) {
+        renderNoResults(query);
+        return;
+      }
+      activeQuery = query;
+      currentPage = page;
+      renderData(data, append);
+    } catch (err) {
+      if (id !== requestId) return;
+      renderError(err);
+    }
   }
 
   input.addEventListener("input", () => {
     const query = input.value.trim();
-    clearTimeout(timer);
+    const id = ++requestId;
+    timer = clearTimeout(timer);
     clear.hidden = input.value.length === 0;
 
     if (!query) {
@@ -291,27 +412,15 @@ function initSearch() {
       return;
     }
 
-    empty.hidden = true;
-    label.hidden = true;
-    results.setAttribute("aria-busy", "true");
-    results.innerHTML = rowSkeletons(4);
+    showLoading();
+    timer = setTimeout(() => runSearch(query, 1, false, id), delay);
+  });
 
-    timer = setTimeout(async () => {
-      try {
-        const hits = await searchTracks(query);
-        renderResults(hits, query);
-      } catch (err) {
-        results.innerHTML = "";
-        results.setAttribute("aria-busy", "false");
-        label.hidden = true;
-        empty.hidden = false;
-        empty.innerHTML = stateMarkup(
-          "Couldn't search right now.",
-          err.message || "Check the connection and try again."
-        );
-        status.textContent = "Search failed";
-      }
-    }, 180);
+  more.addEventListener("click", () => {
+    if (!activeQuery || more.hidden) return;
+    more.hidden = true;
+    more.setAttribute("aria-busy", "true");
+    runSearch(activeQuery, currentPage + 1, true, ++requestId);
   });
 
   clear.addEventListener("click", () => {
@@ -809,6 +918,13 @@ function handlePlay(kind, id) {
     }));
     const queue = withStreams.some((t) => t.id === id) ? withStreams : [source];
     loadTrack(source, queue);
+    return;
+  }
+
+  if (kind === "search-track") {
+    const source = searchTracksCache.find((track) => track.id === id);
+    if (!source) return;
+    loadTrack(source, searchTracksCache);
     return;
   }
 
