@@ -53,7 +53,19 @@
 
         <p class="results-label" id="results-label" hidden>Results</p>
         <p class="sr-only" id="search-status" role="status"></p>
-        <ul class="track-list" id="search-results" aria-busy="false"></ul>
+
+        <section class="search-group" id="artist-group" aria-labelledby="artist-label" hidden>
+          <h2 class="results-label" id="artist-label">Artists</h2>
+          <ul class="track-list" id="artist-results" aria-busy="false"></ul>
+        </section>
+
+        <section class="search-group" id="track-group" aria-labelledby="track-label" hidden>
+          <h2 class="results-label" id="track-label">Tracks</h2>
+          <ul class="track-list" id="search-results" aria-busy="false"></ul>
+        </section>
+
+        <button type="button" class="btn-state search-more" id="search-more" hidden>Show more</button>
+
         <div class="empty-state" id="search-empty" role="status">
           <strong>Nothing here yet.</strong>
           <p>Search for something you love.</p>
