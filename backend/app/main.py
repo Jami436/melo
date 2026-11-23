@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import auth, me, playlists, search, tracks
+from app.routers import auth, me, playlists, recommendations, search, tracks
 
 app = FastAPI(title="Melo API", version="0.1.0")
 
@@ -29,3 +29,6 @@ app.include_router(me.router, prefix="/me", tags=["me"])
 app.include_router(tracks.router, prefix="/tracks", tags=["tracks"])
 app.include_router(playlists.router, prefix="/playlists", tags=["playlists"])
 app.include_router(search.router, prefix="/search", tags=["search"])
+app.include_router(
+    recommendations.router, prefix="/recommendations", tags=["recommendations"]
+)
