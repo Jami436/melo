@@ -265,7 +265,6 @@ function normalizeTrack(track) {
 
 // Tracks fetched from /tracks, each with a src pointing at the stream endpoint.
 let catalogTracks = [];
-let catalogRequest = null;
 
 async function fetchTracks() {
   const { items } = await getTracks();
@@ -278,17 +277,6 @@ async function fetchLikedTracks() {
   return items.map(normalizeTrack);
 }
 
-// Load the catalog once even if several pages need it at the same time.
-function ensureCatalog() {
-  if (catalogTracks.length) return Promise.resolve(catalogTracks);
-  if (!catalogRequest) {
-    catalogRequest = fetchTracks().finally(() => {
-      catalogRequest = null;
-    });
-  }
-  return catalogRequest;
-}
-
 // Catalog bundle consumed by the home page.
 async function fetchCatalog() {
   const [tracks, playlists] = await Promise.all([
@@ -298,14 +286,30 @@ async function fetchCatalog() {
   return { tracks, playlists };
 }
 
-// Client-side search over the fetched catalog (no search endpoint yet).
-async function searchTracks(query) {
-  const q = String(query || "").trim().toLowerCase();
-  if (!q) return [];
-  await ensureCatalog();
-  return catalogTracks.filter(
-    (t) => t.title.toLowerCase().includes(q) || t.artist.toLowerCase().includes(q)
+// Server-side search: the backend ranks matches across title, artist and album
+// and returns the track and artist groups separately.
+async function searchTracks(query, page = 1, size = 20) {
+  const q = String(query || "").trim();
+  if (!q) {
+    return { query: q, tracks: [], artists: [], trackTotal: 0, artistTotal: 0, page, size };
+  }
+
+  const data = await apiRequest(
+    `/search?q=${encodeURIComponent(q)}&page=${encodeURIComponent(page)}&size=${encodeURIComponent(size)}`
   );
+  return {
+    query: data.query,
+    tracks: (data.tracks.items || []).map(normalizeTrack),
+    artists: (data.artists.items || []).map((artist) => ({
+      name: artist.name,
+      trackCount: artist.track_count,
+      topTrack: normalizeTrack(artist.top_track),
+    })),
+    trackTotal: data.tracks.total,
+    artistTotal: data.artists.total,
+    page: data.tracks.page,
+    size: data.tracks.size,
+  };
 }
 
 // Library = the authenticated user's playlists.
